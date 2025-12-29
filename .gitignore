@@ -1,0 +1,57 @@
+# Database
+*.sqlite3
+db.sqlite3
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+media/
+staticfiles/
+
+# Environment variables
+.env
+.env.local
+.venv
+venv/
+ENV/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dependencies
+/pipenv
+/poetry.lock
+Pipfile.lock
+
+# Migrations (if you regenerate them)
+**/migrations/
+!**/migrations/__init__.py
+
+# Testing / Coverage
+htmlcov/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.pytest_cache/
+
+# Docker
+.dockerignore
+
+# AWS / Cloud
+.aws/
