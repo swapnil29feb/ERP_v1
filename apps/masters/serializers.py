@@ -18,3 +18,15 @@ class AccessorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Accessory
         fields = '__all__'
+        
+        
+class ProductSummarySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Product
+        fields = (
+            'prod_id',
+            'make',
+            'order_code',
+            'wattage',
+            'lumen_output',
+        )

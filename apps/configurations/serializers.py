@@ -1,22 +1,39 @@
 from rest_framework import serializers
 from apps.configurations.models import (
     LightingConfiguration,
-    ConfigurationAccessory
+    ConfigurationAccessory,
+    ConfigurationDriver
 )
+from apps.masters.serializers import ProductSummarySerializer
 
+
+
+# class LightingConfigurationSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = LightingConfiguration
+#         fields = "__all__"
+#         read_only_fields = ("project",)
+
+#     def create(self, validated_data):
+#         area = validated_data["area"]
+#         validated_data["project"] = area.project
+#         return super().create(validated_data)
 
 class LightingConfigurationSerializer(serializers.ModelSerializer):
-    area_name = serializers.CharField(source="area.name", read_only=True)
-    product_code = serializers.CharField(source="product.order_code", read_only=True)
-    driver_code = serializers.CharField(
-        source="driver.driver_code",
-        read_only=True
+    product_detail = ProductSummarySerializer(
+        source = 'product',
+        read_only = True
     )
-
+    
     class Meta:
         model = LightingConfiguration
         fields = '__all__'
-
+        read_only_fields = ('project',)
+    
+    def create(self, validated_data):
+        area = validated_data['area']
+        validated_data['project'] = area.project
+        return super().create(validated_data)
 
 class ConfigurationAccessorySerializer(serializers.ModelSerializer):
     accessory_name = serializers.CharField(
@@ -31,4 +48,20 @@ class ConfigurationAccessorySerializer(serializers.ModelSerializer):
     
     class Meta:
         model = ConfigurationAccessory
+        fields = '__all__'
+
+
+class ConfigurationDriverSerializer(serializers.ModelSerializer):
+    driver_name = serializers.CharField(
+        source="driver.driver_name",
+        read_only=True
+    )
+    driver_type = serializers.CharField(
+        source="driver.driver_type",
+        read_only=True
+    )
+    
+    
+    class Meta:
+        model = ConfigurationDriver
         fields = '__all__'

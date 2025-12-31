@@ -1,8 +1,10 @@
-from django.urls import path
+from rest_framework.routers import DefaultRouter
 from .views import ProductListAPI, DriverListAPI, AccessoryListAPI
 
-urlpatterns = [
-    path('products/', ProductListAPI.as_view(), name='product-list'),
-    path('drivers/', DriverListAPI.as_view(), name='driver-list'),
-    path('accessories/', AccessoryListAPI.as_view(), name='accessory-list'),
-]
+router = DefaultRouter()
+
+router.register("products", ProductListAPI, basename="products")
+router.register("drivers", DriverListAPI, basename="drivers")
+router.register("accessories", AccessoryListAPI, basename="accessories")
+
+urlpatterns = router.urls

@@ -26,7 +26,8 @@ class BOQSummaryAPI(APIView):
         project = get_object_or_404(Project, id=project_id)
         summary = get_project_boq_summary(project)
         return Response(summary)
-    
+
+  
 class BOQApproveAPI(APIView):
     def post(self, request, boq_id):
         boq = get_object_or_404(BOQ, id=boq_id)

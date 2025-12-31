@@ -3,47 +3,33 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
 
-from .models import LightingConfiguration, ConfigurationAccessory
-from .serializers import LightingConfigurationSerializer, ConfigurationAccessorySerializer
+from .models import (
+    LightingConfiguration,
+    ConfigurationAccessory,
+    ConfigurationDriver
+)
+from .serializers import (
+    LightingConfigurationSerializer,
+    ConfigurationAccessorySerializer,
+    ConfigurationDriverSerializer
+)
 
 
 class LightingConfigurationListAPI(ModelViewSet):
-    queryset = LightingConfiguration.objects.select_related(
-        "area", "product", "driver"
-    )
+    queryset = LightingConfiguration.objects.all()
     serializer_class = LightingConfigurationSerializer
-    
-    @action(
-        detail=True,
-        methods=["get", 'post'],
-        url_path="accessories"
-    )
-    def accessories(self, request, pk=None):
-        """
-        GET  /api/configurations/{id}/accessories/
-        POST /api/configurations/{id}/accessories/
-        """
-        if request.method == "GET":
-            accessories = ConfigurationAccessory.objects.filter(
-                configuration_id=pk
-            )
-            serializer = ConfigurationAccessorySerializer(
-                accessories, many=True
-            )
-            return Response(serializer.data)
 
-        if request.method == "POST":
-            data = request.data.copy()
-            data["configuration"] = pk
-
-            serializer = ConfigurationAccessorySerializer(data=data)
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+    @action(detail=False, methods=["get"], url_path="by-area/(?P<area_id>[^/.]+)")
+    def by_area(self, request, area_id=None):
+        configs = self.queryset.filter(area_id=area_id)
+        serializer = self.get_serializer(configs, many=True)
+        return Response(serializer.data)
     
-class ConfigurationAccessoryListAPI(ModelViewSet):
-    queryset = ConfigurationAccessory.objects.select_related(
-        "configuration",
-        "accessory"
-    )
+class ConfigurationAccessoryViewSet(ModelViewSet):
+    queryset = ConfigurationAccessory.objects.all()
     serializer_class = ConfigurationAccessorySerializer
+
+
+class ConfigurationDriverViewSet(ModelViewSet):
+    queryset = ConfigurationDriver.objects.all()
+    serializer_class = ConfigurationDriverSerializer
