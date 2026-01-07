@@ -4,72 +4,55 @@ from apps.masters.models import Product, Driver, Accessory
 
 
 class BOQ(models.Model):
-
-    STATUS_CHOICES = [
-        ('DRAFT', 'Draft'),
-        ('APPROVED', 'Approved'),
-    ]
-
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
-    version = models.PositiveIntegerField(default=1)
+    version = models.PositiveIntegerField()
     status = models.CharField(
-        max_length=20,
-        choices=STATUS_CHOICES,
-        default='DRAFT'
+        max_length=10,
+        choices=[("DRAFT", "Draft"), ("FINAL", "Final")],
+        default="DRAFT"
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    locked_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        unique_together = ('project', 'version')
-        ordering = ['-version']
+        unique_together = ("project", "version")
 
-    def __str__(self):
-        return f"BOQ v{self.version} ({self.project.name})"
 
     
 class BOQItem(models.Model):
-    ITEM_TYPE_CHOICES = [
-        ("PRODUCT", "Product"),
-        ("DRIVER", "Driver"),
-        ("ACCESSORY", "Accessory"),
-    ]
-
-    boq = models.ForeignKey(
-        BOQ,
-        on_delete=models.CASCADE,
-        related_name="items"
-    )
-    area = models.ForeignKey(
-        Area,
-        on_delete=models.CASCADE
-    )
+    boq = models.ForeignKey(BOQ, on_delete=models.CASCADE, related_name="items")
+    area = models.ForeignKey(Area, on_delete=models.CASCADE)
 
     item_type = models.CharField(
         max_length=20,
-        choices=ITEM_TYPE_CHOICES
+        choices=[("PRODUCT", "Product"), ("DRIVER", "Driver"), ("ACCESSORY", "Accessory")]
     )
 
-    # Generic references (only one used based on item_type)
     product = models.ForeignKey(
         Product,
-        on_delete=models.PROTECT,
         null=True,
-        blank=True
+        blank=True,
+        on_delete=models.PROTECT
     )
     driver = models.ForeignKey(
         Driver,
-        on_delete=models.PROTECT,
         null=True,
-        blank=True
+        blank=True,
+        on_delete=models.PROTECT
     )
     accessory = models.ForeignKey(
         Accessory,
-        on_delete=models.PROTECT,
         null=True,
-        blank=True
+        blank=True,
+        on_delete=models.PROTECT
     )
 
     quantity = models.PositiveIntegerField()
+
+    # 🔽 COMMERCIAL SNAPSHOT
+    unit_price = models.DecimalField(max_digits=12, decimal_places=2)
+    markup_pct = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    final_price = models.DecimalField(max_digits=12, decimal_places=2)
 
     class Meta:
         constraints = [

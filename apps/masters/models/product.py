@@ -1,4 +1,6 @@
 from django.db import models
+import random
+from decimal import Decimal
 
 
 class Product(models.Model):
@@ -13,12 +15,6 @@ class Product(models.Model):
     length_mm = models.IntegerField(null=True, blank=True)
     width_mm = models.IntegerField(null=True, blank=True)
     height_mm = models.IntegerField(null=True, blank=True)
-
-    linear = models.CharField(
-        max_length=3,
-        choices=[('YES', 'Yes'), ('NO', 'No')],
-        default='NO'
-    )
 
     mounting_style = models.CharField(
         max_length=15,
@@ -50,6 +46,12 @@ class Product(models.Model):
     website_link = models.URLField(null=True, blank=True)
     visual_image = models.ImageField(upload_to='lighting_specs/images/', null=True, blank=True)
 
+    base_price = models.DecimalField(
+        max_digits= 10,
+        decimal_places= 2,
+        # default= Decimal("1.00")
+        default= random.randint(1,99)
+    )
     DRIVER_INTEGRATION_CHOICES = [
         ('INTEGRATED', 'Integrated Driver'),
         ('EXTERNAL', 'External Driver'),

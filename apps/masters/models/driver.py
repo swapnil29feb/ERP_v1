@@ -1,4 +1,5 @@
 from django.db import models
+import random
 
 class Driver(models.Model):
     driver_code = models.CharField(max_length=100, unique=True)
@@ -12,6 +13,12 @@ class Driver(models.Model):
         max_length=3,
         choices=[('YES', 'Yes'), ('NO', 'No')],
         default='YES'
+    )
+    
+    base_price = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=random.randint(1,99)
     )
 
     def __str__(self):
