@@ -1,0 +1,394 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Project Detail | Lighting ERP{% endblock %}
+
+{% block header_title %}
+<div class="project-header-info">
+    <div class="breadcrumbs">
+        <a href="/projects/">Projects</a> <span style="margin: 0 0.5rem; opacity: 0.5;">/</span>
+        <select id="project-selector" class="form-control" style="width: auto; height: 32px; font-size: 13px; display: inline-block; padding: 0 2rem 0 1rem;"></select>
+    </div>
+    <h2 id="pd-name">Loading Project...</h2>
+</div>
+{% endblock %}
+
+{% block header_controls %}
+<div id="project-mode-badge" style="margin-right: 1rem;"></div>
+<div id="project-header-status-pill"></div>
+<button class="btn btn-secondary btn-sm" onclick="window.location.reload()">
+    <i class="fa-solid fa-refresh"></i>
+</button>
+{% endblock %}
+
+{% block content %}
+<!-- Global Project Tabs -->
+<div class="main-tabs-bar" id="main-tabs-bar" style="border-bottom: 1px solid var(--border-divider); display: flex; background: #F8FAFC; padding: 0 1.5rem;">
+    <button class="main-tab-item active" onclick="ERPWorkspace.switchMainTab('workspace')" id="tab-btn-workspace">
+        <i class="fa-solid fa-laptop-code"></i> Workspace
+    </button>
+    <button class="main-tab-item" onclick="ERPWorkspace.switchMainTab('boq')" id="tab-btn-boq" style="display: none;">
+        <i class="fa-solid fa-file-invoice-dollar"></i> BOQ
+    </button>
+</div>
+
+<div id="project-workspace-container" style="display: flex; flex-direction: column; height: calc(100vh - var(--header-height) - 48px); overflow: hidden;">
+    <div id="layout-area-wise" style="display: flex; flex: 1; overflow: hidden; background: #E2E8F0;">
+        
+        <!-- PANE 1: AREAS (LEFT) -->
+        <div class="pane pane-areas" id="pane-areas" style="width: 280px; background: #FFFFFF; display: flex; flex-direction: column; border-right: 1px solid var(--border-divider);">
+            <div class="pane-header" style="padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; background: #FFFFFF;">
+                <h3 style="font-size: 16px; margin: 0;">Areas</h3>
+                <button class="btn btn-primary btn-sm" id="btn-add-area" style="padding: 4px 10px; font-size: 12px;">+ Add Area</button>
+            </div>
+            <div class="pane-content" id="areas-list" style="flex: 1; overflow-y: auto; padding: 0.5rem 0;">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+
+        <!-- PANE 2: SUBAREAS (CENTER) -->
+        <div class="pane pane-subareas" id="pane-subareas" style="width: 380px; background: #F8FAFC; border-right: 1px solid var(--border-divider); display: none; flex-direction: column; transition: transform var(--transition-fast);">
+            <div class="pane-header" style="padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="font-size: 16px; margin: 0;" id="subarea-header-title">Subareas</h3>
+                <button class="btn btn-primary btn-sm" id="btn-add-subarea" style="padding: 4px 10px; font-size: 12px;">+ Add Subarea</button>
+            </div>
+            <div class="pane-content" id="subareas-list" style="flex: 1; overflow-y: auto; padding: 1rem;">
+                <!-- Injected via JS -->
+                 <div style="padding: 2rem; text-align: center; color: var(--text-muted); font-size: 13px;">
+                    Select an Area to view subareas.
+                 </div>
+            </div>
+        </div>
+
+        <!-- PANE 3: CONFIGURATION (RIGHT) -->
+        <div class="pane-main-canvas" id="pane-config" style="flex: 1; background: #FFFFFF; display: none; flex-direction: column; overflow: hidden; position: relative;">
+            <div class="pane-header" style="padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-divider); display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <h3 style="font-size: 16px; margin: 0;" id="config-header-title">Subarea Details</h3>
+                    <div id="config-breadcrumbs" class="breadcrumbs" style="margin: 0;">
+                        <!-- Project > Area > Subarea -->
+                    </div>
+                </div>
+                <button class="btn-icon" onclick="ERPWorkspace.closeConfigPane()" style="font-size: 1.25rem;">&times;</button>
+            </div>
+
+            <!-- Configuration Tabs -->
+            <div class="workspace-tabs" style="display: flex; border-bottom: 1px solid var(--border-divider); background: #F8FAFC; padding: 0 1.5rem;">
+                <button class="ws-tab-btn active" onclick="ERPWorkspace.switchConfigTab('luminaria')" data-tab="luminaria">Luminaria</button>
+                <button class="ws-tab-btn" onclick="ERPWorkspace.switchConfigTab('drivers')" data-tab="drivers">Drivers</button>
+                <button class="ws-tab-btn" onclick="ERPWorkspace.switchConfigTab('accessories')" data-tab="accessories">Accessories</button>
+                <button class="ws-tab-btn" onclick="ERPWorkspace.switchConfigTab('summary')" data-tab="summary">Summary</button>
+            </div>
+
+            <div class="workspace-tab-content" style="flex: 1; overflow-y: auto;">
+                <!-- Column/Table Layouts injected here -->
+                <div id="tab-panel-luminaria" class="tab-panel active" style="padding: 1.5rem;"></div>
+                <div id="tab-panel-drivers" class="tab-panel" style="padding: 1.5rem; display: none;"></div>
+                <div id="tab-panel-accessories" class="tab-panel" style="padding: 1.5rem; display: none;"></div>
+                <div id="tab-panel-summary" class="tab-panel" style="padding: 1.5rem; display: none;"></div>
+            </div>
+            
+            <div class="pane-footer" id="config-pane-footer" style="padding: 0.75rem 1.5rem; border-top: 1px solid var(--border-divider); background: #F8FAFC; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
+                <div>Total Load: <span id="footer-total-wattage" style="font-weight: 700;">0W</span></div>
+                <div>Total Cost: <span id="footer-total-cost" style="font-weight: 700;">₹ 0</span></div>
+            </div>
+        </div>
+
+        <!-- Initial Placeholder (When nothing selected) -->
+        <div id="workspace-initial-placeholder" style="flex: 1; display: flex; align-items: center; justify-content: center; background: white; flex-direction: column; gap: 1rem; color: var(--text-muted);">
+             <i class="fa-solid fa-arrow-left" style="font-size: 2rem; opacity: 0.2;"></i>
+             <span>Select an Area to view Subareas</span>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* 3-Pane Specific Styles */
+    .area-item {
+        padding: 1rem 1.5rem;
+        cursor: pointer;
+        border-bottom: 1px solid #F1F5F9;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        transition: all 0.2s;
+        border-left: 3px solid transparent;
+    }
+    .area-item:hover { background: #F8FAFC; }
+    .area-item.active { 
+        background: #EFF6FF; 
+        border-left-color: var(--primary);
+    }
+    .area-item .area-info { display: flex; flex-direction: column; gap: 2px; }
+    .area-item .area-name { font-weight: 600; font-size: 14px; color: var(--text-main); }
+    .area-item .area-type { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .area-item .area-count { 
+        background: #E2E8F0; 
+        color: var(--text-secondary); 
+        padding: 2px 8px; 
+        border-radius: 99px; 
+        font-size: 11px; 
+        font-weight: 700; 
+    }
+    .area-item.active .area-count { background: var(--primary); color: white; }
+
+    /* Subarea Card Styles */
+    .subarea-card {
+        background: white;
+        border: 1px solid var(--border-divider);
+        border-radius: 8px;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .subarea-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .subarea-card.active { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); }
+    .subarea-card .sa-name { font-weight: 600; font-size: 15px; margin-bottom: 0.5rem; }
+    .subarea-card .sa-summary { font-size: 12px; color: var(--text-muted); display: flex; gap: 0.75rem; align-items: center; }
+    .subarea-card .sa-icon { 
+        width: 32px; height: 32px; border-radius: 6px; 
+        display: flex; align-items: center; justify-content: center;
+        background: #ECFDF5; color: #10B981;
+    }
+
+    /* Workspace Tabs */
+    .ws-tab-btn {
+        padding: 1rem 1rem;
+        border: none;
+        background: transparent;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-muted);
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s;
+    }
+    .ws-tab-btn:hover { color: var(--primary); }
+    .ws-tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+    /* Summary Card (Read-only) */
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    .summary-stat-card {
+        padding: 1.5rem;
+        background: white;
+        border: 1px solid var(--border-divider);
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    .summary-stat-card .label { font-size: 12px; color: var(--text-muted); }
+    .summary-stat-card .value { font-size: 24px; font-weight: 700; color: var(--text-main); }
+
+    .total-cost-hero {
+        padding: 2rem;
+        background: #EFF6FF;
+        border: 1px solid #BFDBFE;
+        border-radius: 8px;
+        text-align: center;
+        color: var(--primary);
+    }
+    .total-cost-hero .label { font-size: 14px; font-weight: 600; margin-bottom: 0.5rem; }
+    .total-cost-hero .value { font-size: 36px; font-weight: 800; }
+
+    /* ERP Table Overrides for Configuration */
+    .config-table th { padding: 0.5rem 1rem; font-size: 11px; text-transform: uppercase; color: #94A3B8; }
+    .config-table td { padding: 0.75rem 1rem; font-size: 13px; }
+</style>
+
+<div id="layout-project-level" style="display: none; padding: 2rem;">
+    <div class="card">
+        <div style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-divider); padding-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+             <div class="tabs" style="display: flex; gap: 2rem;">
+                 <button class="tab-btn active" onclick="ERPWorkspace.switchProjectTab('overview')">Overview</button>
+                 <button class="tab-btn" onclick="ERPWorkspace.switchProjectTab('boq')">BOQ</button>
+             </div>
+             <div id="project-boq-actions">
+                 <!-- BOQ actions here, disabled if Inquiry -->
+             </div>
+        </div>
+        
+        <div id="project-tab-overview">
+             <div style="background: var(--info-bg); color: var(--info); padding: 1rem; border-radius: var(--radius-erp); border: 1px solid var(--info); margin-bottom: 1.5rem; font-size: 14px;">
+                 <i class="fa-solid fa-circle-info"></i> This inquiry uses a <strong>project-level BOQ</strong>. Area and SubArea management is disabled.
+             </div>
+             <!-- Project details -->
+        </div>
+        
+        <div id="project-tab-boq" style="display: none;">
+             <!-- Project Level BOQ list -->
+        </div>
+    </div>
+    </div>
+</div>
+
+<!-- BOQ Container -->
+<div id="project-boq-container" style="display: none; padding: 2rem;">
+    <div id="boq-tab-empty" style="text-align: center; padding: 5rem; color: var(--text-muted);">
+        <i class="fa-solid fa-file-invoice-dollar" style="font-size: 4rem; opacity: 0.1; margin-bottom: 1.5rem;"></i>
+        <h3>Bill of Quantities</h3>
+        <p id="boq-explanation">Complete configuration to generate BOQ.</p>
+    </div>
+    
+    <div id="boq-active-content" style="display: none;">
+        <!-- BOQ Version List or Detail View will be injected here -->
+    </div>
+</div>
+
+<!-- Modals & Drawers -->
+<div class="modal-overlay" id="overlay-area" style="display: none;">
+    <div class="modal" style="max-width: 450px;">
+        <div class="modal-header">
+            <h3>Add Area</h3>
+            <button class="btn-icon" onclick="Modals.close('overlay-area')">&times;</button>
+        </div>
+        <form id="form-add-area">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Area Name <span style="color: var(--error);">*</span></label>
+                    <input type="text" name="name" class="form-control" required placeholder="e.g. Lobby, Parking">
+                </div>
+                <div class="form-group">
+                    <label>Area Type</label>
+                    <select name="type" class="form-control">
+                        <option value="INTERIOR">Interior</option>
+                        <option value="OUTDOOR">Outdoor</option>
+                        <option value="EXTERNAL">External</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="Modals.close('overlay-area')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Area</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal-overlay" id="overlay-subarea" style="display: none;">
+    <div class="modal" style="max-width: 450px;">
+        <div class="modal-header">
+            <h3>Add Subarea</h3>
+            <button class="btn-icon" onclick="Modals.close('overlay-subarea')">&times;</button>
+        </div>
+        <form id="form-add-subarea">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Subarea Name <span style="color: var(--error);">*</span></label>
+                    <input type="text" name="name" class="form-control" required placeholder="e.g. Reception, Corridor">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea name="description" class="form-control" rows="2" placeholder="Optional details..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="Modals.close('overlay-subarea')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Subarea</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Configuration Addition Modals -->
+<div class="modal-overlay" id="overlay-add-luminaria" style="display: none;">
+    <div class="modal" style="max-width: 600px;">
+        <div class="modal-header">
+            <h3>Add Luminaria to <span id="add-lum-sa-name">Subarea</span></h3>
+            <button class="btn-icon" onclick="Modals.close('overlay-add-luminaria')">&times;</button>
+        </div>
+        <form id="form-add-luminaria">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Select Product (Master Library) <span style="color: var(--error);">*</span></label>
+                    <select id="select-lum-product" class="form-control" required></select>
+                </div>
+                <div class="grid grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label>Quantity <span style="color: var(--error);">*</span></label>
+                        <input type="number" id="input-lum-qty" class="form-control" value="1" min="1" required>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="Modals.close('overlay-add-luminaria')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Add Row</button>
+            </div>
+        </form>
+    </div>
+</div>
+<!-- Driver Addition Modal -->
+<div class="modal-overlay" id="overlay-add-driver" style="display: none;">
+    <div class="modal" style="max-width: 600px;">
+        <div class="modal-header">
+            <h3>Add Driver to <span id="add-drv-sa-name">Subarea</span></h3>
+            <button class="btn-icon" onclick="Modals.close('overlay-add-driver')">&times;</button>
+        </div>
+        <form id="form-add-driver">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Link to Luminaire Row <span style="color: var(--error);">*</span></label>
+                    <select id="select-drv-lum" class="form-control" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Select Driver (Compatible) <span style="color: var(--error);">*</span></label>
+                    <select id="select-drv-driver" class="form-control" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Quantity <span style="color: var(--error);">*</span></label>
+                    <input type="number" id="input-drv-qty" class="form-control" value="1" min="1" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="Modals.close('overlay-add-driver')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Driver</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Accessory Addition Modal -->
+<div class="modal-overlay" id="overlay-add-accessory" style="display: none;">
+    <div class="modal" style="max-width: 600px;">
+        <div class="modal-header">
+            <h3>Add Accessory to <span id="add-acc-sa-name">Subarea</span></h3>
+            <button class="btn-icon" onclick="Modals.close('overlay-add-accessory')">&times;</button>
+        </div>
+        <form id="form-add-accessory">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Link to Luminaire Row (Optional)</label>
+                    <select id="select-acc-lum" class="form-control">
+                        <option value="">Subarea-level Accessory</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Select Accessory <span style="color: var(--error);">*</span></label>
+                    <select id="select-acc-accessory" class="form-control" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Quantity <span style="color: var(--error);">*</span></label>
+                    <input type="number" id="input-acc-qty" class="form-control" value="1" min="1" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="Modals.close('overlay-add-accessory')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Accessory</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/erp_workspace.js' %}"></script>
+{% endblock %}

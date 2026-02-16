@@ -1,0 +1,490 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Add Configuration | Lighting ERP{% endblock %}
+{% block header_title %}Add Configuration{% endblock %}
+
+{% block content %}
+<div class="config-builder-layout">
+    
+    <!-- LEFT PANE: Context (Read-Only) -->
+    <div class="pane pane-left">
+        <h5 class="pane-title"><i class="fa-solid fa-map-location-dot"></i> Context</h5>
+        
+        <div class="context-group">
+            <label>Project</label>
+            <div id="ctx-project-name" class="ctx-value skeleton-text">Loading...</div>
+        </div>
+
+        <div class="context-group">
+            <label>Area Name</label>
+            <div id="ctx-area-name" class="ctx-value skeleton-text">Loading...</div>
+        </div>
+
+        <div class="context-group">
+            <label>Area Code</label>
+            <div id="ctx-area-code" class="ctx-value skeleton-text">Loading...</div>
+        </div>
+
+        <div class="help-box">
+            <i class="fa-solid fa-info-circle"></i>
+            <p>Select products in the center pane. Compatible drivers and accessories will appear on the right.</p>
+        </div>
+
+        <button class="btn btn-secondary" id="btn-back" style="width: 100%; margin-top: auto;">
+            <i class="fa-solid fa-arrow-left"></i> Cancel & Back
+        </button>
+    </div>
+
+    <!-- CENTER PANE: Product Selection (Editable) -->
+    <div class="pane pane-center">
+        <h5 class="pane-title"><i class="fa-solid fa-layer-group"></i> Product Selection</h5>
+        
+        <!-- Product Search -->
+        <div class="product-search-box">
+            <i class="fa-solid fa-search"></i>
+            <input type="text" id="product-search-input" placeholder="Search products by Make, Code, or Name..." autocomplete="off">
+            <div id="product-search-results" class="search-dropdown" style="display: none;"></div>
+        </div>
+
+        <!-- Product Browse List (Show all products) -->
+        <div class="product-browse-section">
+            <div class="browse-header">
+                <span class="browse-title">📦 Available Products</span>
+                <span class="browse-count" id="product-browse-count">Loading...</span>
+            </div>
+            <div id="product-browse-list" class="product-browse-list">
+                <div class="loading-placeholder">
+                    <i class="fa-solid fa-spinner fa-spin"></i> Loading products...
+                </div>
+            </div>
+        </div>
+
+        <!-- Selected Products List -->
+        <div class="selected-products-container">
+            <div class="table-header">
+                <div>Product</div>
+                <div>Code</div>
+                <div style="text-align: center;">Qty</div>
+                <div style="text-align: right;">Base Price (₹)</div>
+                <div style="width: 40px;"></div>
+            </div>
+            <div id="selected-products-list">
+                <!-- Rows injected via JS -->
+                <div class="empty-state-placeholder">
+                    <i class="fa-solid fa-basket-shopping"></i>
+                    <p>No products selected</p>
+                    <small>Click products above to add them</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT PANE: Compatibility (Filtered) -->
+    <div class="pane pane-right">
+        <h5 class="pane-title"><i class="fa-solid fa-check-double"></i> Compatibility</h5>
+        
+        <!-- Drivers Section -->
+        <div class="comp-section" id="drivers-section">
+            <div class="comp-header">
+                <h6><i class="fa-solid fa-microchip"></i> Compatible Drivers</h6>
+                <span class="badge badge-outline" id="driver-count">0</span>
+            </div>
+            <div class="comp-list" id="compatible-drivers-list">
+                <div class="empty-comp">Select products to see drivers</div>
+            </div>
+        </div>
+
+        <!-- Accessories Section -->
+        <div class="comp-section" id="accessories-section">
+            <div class="comp-header">
+                <h6><i class="fa-solid fa-puzzle-piece"></i> Compatible Accessories</h6>
+                <span class="badge badge-outline" id="accessory-count">0</span>
+            </div>
+            <div class="comp-list" id="compatible-accessories-list">
+                <div class="empty-comp">Select products to see accessories</div>
+            </div>
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="pane-footer">
+            <div class="total-summary">
+                <span>Est. Total:</span>
+                <span id="config-total-price">₹ 0.00</span>
+            </div>
+            <button class="btn btn-primary" id="btn-save-config" disabled>
+                <i class="fa-solid fa-save"></i> Save Configuration
+            </button>
+        </div>
+    </div>
+
+</div>
+
+<style>
+    :root {
+        --pane-bg: var(--bg-card);
+        --pane-border: var(--card-border);
+    }
+
+    .config-builder-layout {
+        display: grid;
+        grid-template-columns: 260px 1fr 380px;
+        gap: 1.5rem;
+        height: calc(100vh - 140px); /* Adjust based on header height */
+        min-height: 600px;
+    }
+
+    .pane {
+        background: var(--pane-bg);
+        border: 1px solid var(--pane-border);
+        border-radius: var(--radius-lg);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .pane-title {
+        padding: 1rem;
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 600;
+        border-bottom: 1px solid var(--pane-border);
+        background: hsla(220, 25%, 12%, 0.3);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--primary-light);
+    }
+
+    /* LEFT PANE STYLES */
+    .pane-left {
+        padding: 1rem;
+    }
+
+    .context-group {
+        margin-bottom: 1.5rem;
+    }
+    .context-group label {
+        display: block;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        margin-bottom: 0.25rem;
+    }
+    .ctx-value {
+        font-weight: 600;
+        color: var(--text-main);
+        font-size: 0.95rem;
+    }
+    
+    .help-box {
+        margin-top: 1rem;
+        padding: 1rem;
+        background: hsla(220, 50%, 15%, 0.5);
+        border-radius: var(--radius-md);
+        border: 1px dashed var(--card-border);
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+    }
+    .help-box i { margin-right: 0.5rem; color: var(--info); }
+
+    /* CENTER PANE STYLES */
+    .product-search-box {
+        padding: 1rem;
+        position: relative;
+        border-bottom: 1px solid var(--pane-border);
+    }
+    .product-search-box input {
+        width: 100%;
+        padding: 0.625rem 0.625rem 0.625rem 2.25rem;
+        background: var(--bg-darker);
+        border: 1px solid var(--card-border);
+        border-radius: var(--radius-md);
+        color: var(--text-main);
+    }
+    .product-search-box i {
+        position: absolute;
+        left: 1.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-muted);
+    }
+
+    .search-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 1rem;
+        right: 1rem;
+        background: var(--bg-card);
+        border: 1px solid var(--primary);
+        border-radius: 0 0 var(--radius-md) var(--radius-md);
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 100;
+        box-shadow: var(--shadow-xl);
+    }
+    .search-result-item {
+        padding: 0.75rem;
+        border-bottom: 1px solid var(--card-border);
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .search-result-item:hover { background: var(--bg-hover); }
+
+    .selected-products-container {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .table-header {
+        display: grid;
+        grid-template-columns: 2fr 1fr 80px 100px 40px;
+        gap: 1rem;
+        padding: 0 0.5rem 0.5rem 0.5rem;
+        border-bottom: 1px solid var(--pane-border);
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        font-weight: 600;
+    }
+
+    .product-row {
+        display: grid;
+        grid-template-columns: 2fr 1fr 80px 100px 40px;
+        gap: 1rem;
+        padding: 0.75rem 0.5rem;
+        border-bottom: 1px solid var(--pane-border);
+        align-items: center;
+        animation: fadeIn 0.3s ease;
+    }
+    .product-row:hover { background: hsla(220, 20%, 20%, 0.3); }
+
+    .qty-input {
+        width: 100%;
+        background: var(--bg-darker);
+        border: 1px solid var(--card-border);
+        padding: 0.25rem;
+        border-radius: var(--radius-sm);
+        text-align: center;
+        color: var(--text-main);
+    }
+    .price-input {
+        width: 100%;
+        background: var(--bg-darker);
+        border: 1px solid var(--card-border);
+        padding: 0.25rem;
+        border-radius: var(--radius-sm);
+        text-align: right;
+        color: var(--text-main);
+    }
+
+    /* RIGHT PANE STYLES */
+    .pane-right {
+        background: hsla(220, 25%, 10%, 0.4);
+    }
+
+    .comp-section {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border-bottom: 1px solid var(--pane-border);
+    }
+    .comp-header {
+        padding: 0.75rem 1rem;
+        background: hsla(220, 25%, 15%, 0.4);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .comp-header h6 { margin: 0; font-size: 0.85rem; color: var(--text-secondary); }
+
+    .comp-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0.5rem;
+    }
+
+    .comp-item {
+        background: var(--bg-card);
+        border: 1px solid var(--card-border);
+        border-radius: var(--radius-md);
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        display: grid;
+        gap: 0.5rem;
+        cursor: pointer;
+        transition: border-color 0.2s;
+    }
+    .comp-item.selected {
+        border-color: var(--primary);
+        background: hsla(220, 90%, 56%, 0.1);
+    }
+    
+    .comp-item-header {
+        display: flex;
+        justify-content: space-between;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    
+    .comp-specs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+    }
+
+    .comp-qty-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 0.5rem;
+        padding-top: 0.5rem;
+        border-top: 1px dashed var(--card-border);
+    }
+
+    .pane-footer {
+        padding: 1rem;
+        background: var(--bg-card);
+        border-top: 1px solid var(--pane-border);
+    }
+
+    .total-summary {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: var(--accent);
+    }
+
+    .empty-state-placeholder, .empty-comp {
+        text-align: center;
+        padding: 2rem;
+        color: var(--text-muted);
+        font-size: 0.9rem;
+    }
+    .empty-state-placeholder i { font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.3; }
+
+    /* Utilities */
+    .skeleton-text {
+        height: 1.2em;
+        background: hsla(220, 20%, 20%, 0.5);
+        border-radius: 4px;
+        width: 80%;
+        animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+
+    .badge-integrated {
+        padding: 1rem;
+        text-align: center;
+        background: var(--success-bg);
+        color: var(--success);
+        border: 1px solid var(--success);
+        border-radius: var(--radius-md);
+        margin: 1rem;
+        font-size: 0.85rem;
+    }
+
+    /* Product Browse Section */
+    .product-browse-section {
+        max-height: 250px;
+        overflow-y: auto;
+        border-bottom: 2px solid var(--pane-border);
+        background: hsla(220, 25%, 8%, 0.5);
+    }
+    .browse-header {
+        padding: 0.75rem 1rem;
+        background: hsla(220, 25%, 15%, 0.6);
+        border-bottom: 1px solid var(--card-border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+    .browse-title {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+    }
+    .browse-count {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        background: var(--bg-darker);
+        padding: 0.25rem 0.625rem;
+        border-radius: var(--radius-full);
+    }
+    .product-browse-list {
+        padding: 0.5rem;
+    }
+    .product-browse-item {
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        background: var(--bg-card);
+        border: 1px solid var(--card-border);
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        transition: all 0.2s;
+        display: grid;
+        grid-template-columns: 50px 2fr 1fr 1fr;
+        gap: 1rem;
+        align-items: center;
+    }
+    .product-browse-item:hover {
+        border-color: var(--primary);
+        background: hsla(220, 90%, 56%, 0.05);
+        transform: translateX(2px);
+    }
+    .product-browse-item.already-selected {
+        opacity: 0.5;
+        cursor: not-allowed;
+        background: var(--bg-darker);
+    }
+    .product-browse-item.already-selected:hover {
+        border-color: var(--card-border);
+        transform: none;
+    }
+    .browse-product-img {
+        width: 100%;
+        height: 50px;
+        object-fit: cover;
+        border-radius: var(--radius-sm);
+        background: var(--bg-darker);
+    }
+    .browse-product-name {
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: var(--text-main);
+    }
+    .browse-product-code {
+        font-family: monospace;
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+    .browse-product-price {
+        text-align: right;
+        font-weight: 700;
+        color: var(--accent);
+    }
+    .loading-placeholder {
+        text-align: center;
+        padding: 2rem;
+        color: var(--text-muted);
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/configuration_builder.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% for driver in drivers %}
+    <div class="master-card">
+        <div class="master-card-header">
+            <div style="flex: 1;">
+                <div class="master-card-title">{{ driver.driver_make }}</div>
+                <div class="master-card-subtitle">{{ driver.driver_code }}</div>
+            </div>
+            <div class="master-card-price">{{ driver.base_price|default:0 }}</div>
+        </div>
+
+        <div class="master-card-meta">
+            {% if driver.driver_type %}
+                <div class="master-card-meta-item">
+                    <i class="fa-solid fa-tag"></i>
+                    <span>{{ driver.driver_type }}</span>
+                </div>
+            {% endif %}
+            {% if driver.max_wattage %}
+                <div class="master-card-meta-item">
+                    <i class="fa-solid fa-bolt"></i>
+                    <span>Max {{ driver.max_wattage }}W</span>
+                </div>
+            {% endif %}
+            {% if driver.input_voltage_range %}
+                <div class="master-card-meta-item">
+                    <i class="fa-solid fa-plug"></i>
+                    <span>{{ driver.input_voltage_range }}</span>
+                </div>
+            {% endif %}
+            <div class="master-card-meta-item">
+                <i class="fa-solid fa-sliders"></i>
+                <span>Dimmable: {{ driver.dimmable|default:"YES" }}</span>
+            </div>
+        </div>
+
+        <div class="master-card-actions">
+            <button class="btn btn-secondary" onclick="MastersPage.editDriver({{ driver.id }})">
+                <i class="fa-solid fa-edit"></i> Edit
+            </button>
+            <button class="btn btn-danger" onclick="MastersPage.deleteDriver({{ driver.id }})">
+                <i class="fa-solid fa-trash"></i>
+            </button>
+        </div>
+    </div>
+{% empty %}
+    <div class="card" style="text-align: center; padding: 3rem; grid-column: 1/-1;">
+        <i class="fa-solid fa-microchip" style="font-size: 3rem; color: var(--text-muted); opacity: 0.3; margin-bottom: 1rem;"></i>
+        <p style="color: var(--text-secondary);">No drivers yet. Add your first driver!</p>
+    </div>
+{% endfor %}

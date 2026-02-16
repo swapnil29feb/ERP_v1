@@ -7,22 +7,25 @@ from apps.configurations.views import (
 
 router = DefaultRouter()
 
+# Main configuration endpoints
 router.register(
-    "configurations",
+    r"",
     LightingConfigurationListAPI,
     basename="configurations"
 )
 
+# Driver endpoints
 router.register(
-    "configuration-accessories",
-    ConfigurationAccessoryViewSet,
-    basename="configuration-accessories"
+    r"configuration-drivers",
+    ConfigurationDriverViewSet,
+    basename="configuration-driver"
 )
 
+# Accessory endpoints
 router.register(
-    "configuration-drivers",
-    ConfigurationDriverViewSet,
-    basename="configuration-drivers"
+    r"configuration-accessories",
+    ConfigurationAccessoryViewSet,
+    basename="configuration-accessory"
 )
 
 urlpatterns = router.urls

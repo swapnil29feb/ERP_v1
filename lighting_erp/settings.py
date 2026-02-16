@@ -1,5 +1,8 @@
 
 from pathlib import Path
+from datetime import timedelta
+from corsheaders.defaults import default_headers
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -16,6 +19,9 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    "authorization",
+]
 
 # Application definition
 
@@ -27,34 +33,59 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     
-    'rest_framework',
     'drf_spectacular',
+    "corsheaders",
+    'django_filters',
     
     'apps.masters',
     'apps.projects',
-    'apps.configurations',
+    # 'apps.configurations',
+    'apps.configurations.apps.ConfigurationsConfig',
     'apps.boq',
+    'authenticate',
+    
+    # Audit logs by 'django-easy-audit'
+    'easyaudit',
+
+    'rest_framework',
+    'rest_framework_simplejwt',
+
+    "apps.common",
+    # "apps.rbac",
+    "apps.rbac.apps.RbacConfig",
 ]
 
 REST_FRAMEWORK = {
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+    "DEFAULT_PERMISSION_CLASSES": (
+        "rest_framework.permissions.IsAuthenticated",
+    ),
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+
+    'DEFAULT_FILTER_BACKENDS': (
+        'django_filters.rest_framework.DjangoFilterBackend'
+    ),
 }
 
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'Lighting ERP API',
-    'DESCRIPTION': 'API documentation for Lighting ERP (Projects, Areas, Products, BOQ)',
-    'VERSION': '1.0.0',
-    'SERVE_INCLUDE_SCHEMA': False,
+    "TITLE": "Lighting ERP API",
+    "DESCRIPTION": "ERP backend for Lighting projects, BOQ, and audit",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
 }
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.common.CommonMiddleware",
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'easyaudit.middleware.easyaudit.EasyAuditMiddleware',
 ]
 
 ROOT_URLCONF = 'lighting_erp.urls'
@@ -62,7 +93,7 @@ ROOT_URLCONF = 'lighting_erp.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -123,14 +154,72 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
 
 
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
 ]
 # Ensure CORS is also allowed if you haven't already
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
+
+EASY_AUDIT_WATCH_MODEL_EVENTS = True
+EASY_AUDIT_WATCH_AUTH_EVENTS = False
+EASY_AUDIT_WATCH_REQUEST_EVENTS = False
+
+EASY_AUDIT_INCLUDE_FIELDS = {
+    # Projects & Areas
+    "apps.projects.models.Project": "__all__",
+    "apps.projects.models.Area": "__all__",
+
+    # Masters
+    "apps.masters.models.product.Product": "__all__",
+    "apps.masters.models.driver.Driver": "__all__",
+    "apps.masters.models.accessory.Accessory": "__all__",
+
+    # BOQ
+    "apps.boq.models.BOQ": ["status", "version"],
+}
+
+EASY_AUDIT_EXCLUDE_FIELDS = {
+    "*": ["created_at", "updated_at"],
+}
+
+# Configure the Global Setting
+# Django framework advising that you should explicitly
+# define the default type for auto-created primary 
+# keys to use a 64-bit integer type (BigAutoField)
+# instead of the default 32-bit integer type (AutoField).
+# This is a best practice for modern Django projects
+# to avoid potential integer overflow issues as your database grows.
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# REST_FRAMEWORK = {
+#     'DEFAULT_PERMISSION_CLASSES': (
+#         'rest_framework.permissions.IsAuthenticated',
+#     ),
+#     'DEFAULT_AUTHENTICATION_CLASSES': (
+#         'rest_framework_simplejwt.authentication.JWTAuthentication',
+#     ),
+# }
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),   # ERP sessions
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "AUTH_HEADER_TYPES": ("Bearer",),
+}
+
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+

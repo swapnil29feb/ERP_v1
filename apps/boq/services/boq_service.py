@@ -1,429 +1,361 @@
-import math
-# from time import timezone
-from django.utils import timezone
-from django.db.models import Sum
+import io
+import openpyxl
 from decimal import Decimal
+from datetime import date
+from django.utils import timezone
 from django.db import transaction
+from django.db.models import Sum
+from django.http import HttpResponse
+from django.core.exceptions import ValidationError
+from django.db.models import Max
+
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from reportlab.lib.units import mm
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_RIGHT
+
 from apps.boq.models import BOQ, BOQItem
+from apps.projects.models import Project
 from apps.configurations.models import (
     LightingConfiguration,
     ConfigurationAccessory,
+    ConfigurationDriver
 )
-from django.core.exceptions import ValidationError
-from decimal import Decimal
-from django.db import transaction
-from apps.boq.models import BOQ, BOQItem
-from apps.configurations.models import LightingConfiguration, ConfigurationAccessory
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
-from django.http import HttpResponse
-from decimal import Decimal
-from datetime import date
-
-import openpyxl
-from openpyxl.styles import Font, Alignment, numbers
-from openpyxl.utils import get_column_letter
-from decimal import Decimal
-from datetime import date
-from django.http import HttpResponse
-
 
 class BOQPDFBuilder:
-    def __init__(self, boq):
+    def __init__(self, boq, is_draft=False):
         self.boq = boq
-        self.width, self.height = A4
-        self.y = self.height - 40
-
-        self.response = HttpResponse(content_type="application/pdf")
-        self.response["Content-Disposition"] = (
-            f'attachment; filename="BOQ_{boq.project.name}_V{boq.version}.pdf"'
+        self.is_draft = is_draft
+        self.buffer = io.BytesIO()
+        self.pagesize = A4
+        self.width, self.height = self.pagesize
+        self.MARGIN_X = 15 * mm
+        self.MARGIN_Y = 20 * mm
+        self.styles = getSampleStyleSheet()
+        self.style_normal = ParagraphStyle(
+            'CreateNormal', parent=self.styles['Normal'], fontSize=8, leading=10
         )
 
-        self.c = canvas.Canvas(self.response, pagesize=A4)
+    def _header_footer(self, canvas, doc):
+        canvas.saveState()
+        canvas.setFont('Helvetica-Bold', 14)
+        canvas.drawString(self.MARGIN_X, self.height - 30, "TVUM TECH")
+        canvas.setFont('Helvetica', 10)
+        canvas.drawString(self.MARGIN_X, self.height - 45, "Lighting ERP – Bill of Quantities")
+        canvas.setFont('Helvetica', 9)
+        canvas.drawString(self.MARGIN_X, self.height - 65, f"Project: {self.boq.project.name}")
+        canvas.drawRightString(self.width - self.MARGIN_X, self.height - 65, f"BOQ Version: {self.boq.version}")
+        canvas.drawString(self.MARGIN_X, self.height - 80, f"Status: {self.boq.status}")
+        canvas.drawRightString(self.width - self.MARGIN_X, self.height - 80, f"Date: {date.today().strftime('%d-%m-%Y')}")
+        canvas.setStrokeColor(colors.black)
+        canvas.setLineWidth(0.5)
+        canvas.line(self.MARGIN_X, self.height - 90, self.width - self.MARGIN_X, self.height - 90)
+        canvas.setFont('Helvetica', 8)
+        canvas.drawCentredString(self.width / 2, 20, "System Generated BOQ | TVUM Lighting ERP")
+        canvas.drawRightString(self.width - self.MARGIN_X, 20, f"Page {doc.page}")
+        if self.is_draft:
+            self._draw_watermark(canvas)
+        canvas.restoreState()
 
-    # ------------------ HELPERS ------------------ #
+    def _draw_watermark(self, canvas):
+        canvas.saveState()
+        canvas.setFont('Helvetica-Bold', 36)
+        canvas.setStrokeColor(colors.lightgrey)
+        canvas.setFillColor(colors.lightgrey, alpha=0.15)
+        text = "DRAFT – INTERNAL ESTIMATE – NOT FOR CLIENT USE"
+        canvas.translate(self.width/2, self.height/2)
+        canvas.rotate(45)
+        canvas.drawCentredString(0, 0, text)
+        canvas.restoreState()
 
-    def money(self, value):
+    def _format_currency(self, value):
         return f"₹ {value:,.2f}"
 
-    def new_page(self):
-        self.draw_footer()
-        self.c.showPage()
-        self.y = self.height - 40
-        self.draw_header()
-
-    def ensure_space(self, space=80):
-        if self.y < space:
-            self.new_page()
-
-    # ------------------ HEADER / FOOTER ------------------ #
-
-    def draw_header(self):
-        self.c.setFont("Helvetica-Bold", 14)
-        self.c.drawString(40, self.y, "TVUM TECH")
-        self.y -= 18
-
-        self.c.setFont("Helvetica", 10)
-        self.c.drawString(40, self.y, "Lighting ERP – Bill of Quantities")
-        self.y -= 25
-
-        self.c.setFont("Helvetica", 9)
-        self.c.drawString(40, self.y, f"Project: {self.boq.project.name}")
-        self.c.drawRightString(self.width - 40, self.y, f"BOQ Version: {self.boq.version}")
-        self.y -= 14
-
-        self.c.drawString(40, self.y, f"Status: {self.boq.status}")
-        self.c.drawRightString(self.width - 40, self.y, f"Date: {date.today().strftime('%d-%m-%Y')}")
-        self.y -= 20
-
-        self.c.line(40, self.y, self.width - 40, self.y)
-        self.y -= 15
-
-    def draw_footer(self):
-        self.c.setFont("Helvetica", 8)
-        self.c.drawCentredString(
-            self.width / 2,
-            20,
-            "System generated BOQ | TVUM Lighting ERP"
-        )
-
-    # ------------------ TABLE ------------------ #
-
-    def draw_table_header(self):
-        self.c.setFont("Helvetica-Bold", 9)
-        headers = [
-            ("Type", 40),
-            ("Item Code", 80),
-            ("Description", 150),
-            ("Qty", 330),
-            ("Unit Price (₹)", 370),
-            ("Margin (%)", 450),
-            ("Line Total (₹)", 520),
-        ]
-
-        for text, x in headers:
-            self.c.drawString(x, self.y, text)
-
-        self.y -= 6
-        self.c.line(40, self.y, self.width - 40, self.y)
-        self.y -= 10
-
-    # ------------------ MAIN CONTENT ------------------ #
-
     def build(self):
-        self.draw_header()
+        doc = SimpleDocTemplate(
+            self.buffer, pagesize=self.pagesize,
+            leftMargin=self.MARGIN_X, rightMargin=self.MARGIN_X,
+            topMargin=40 * mm, bottomMargin=30 * mm
+        )
+        elements = []
         grand_total = Decimal(0)
-
+        # areas = self.boq.items.select_related("area").order_by("area__name").values_list("area__id", "area__name").distinct()
         areas = (
             self.boq.items
             .select_related("area")
-            .order_by("area__name")
             .values_list("area__id", "area__name")
             .distinct()
         )
-
         for area_id, area_name in areas:
-            self.ensure_space()
-            self.c.setFont("Helvetica-Bold", 10)
-            self.c.drawString(40, self.y, f"Area: {area_name}")
-            self.y -= 14
-
-            self.draw_table_header()
+            elements.append(Paragraph(f"<b>Area: {area_name}</b>", self.styles['Heading4']))
+            elements.append(Spacer(1, 5))
+            data = [["Type", "Item Code", "Description", "Qty", "Unit Rate", "Total"]]
+            col_widths = [25*mm, 40*mm, 60*mm, 15*mm, 25*mm, 25*mm]
             area_total = Decimal(0)
-
             items = self.boq.items.filter(area_id=area_id)
-
             for item in items:
                 qty = Decimal(item.quantity)
-                unit_price = Decimal(item.unit_price or 0)
-                margin = Decimal(item.markup_pct or 0)
-
-                line_total = qty * unit_price * (1 + margin / 100)
+                selling_rate = Decimal(item.unit_price or 0) * (1 + Decimal(item.markup_pct or 0) / 100)
+                line_total = Decimal(item.final_price or 0)
                 area_total += line_total
                 grand_total += line_total
+                raw_desc = "-"
+                item_code = "-"
+                if item.item_type == "PRODUCT" and item.product:
+                    raw_desc = item.product.make
+                    item_code = item.product.order_code
+                elif item.item_type == "DRIVER" and item.driver:
+                    raw_desc = f"{item.driver.driver_make} - {item.driver.driver_code}"
+                elif item.item_type == "ACCESSORY" and item.accessory:
+                    raw_desc = item.accessory.accessory_name
 
-                desc = (
-                    item.product.make if item.product else
-                    item.driver.driver_type if item.driver else
-                    item.accessory.accessory_type
-                )
-
-                self.c.setFont("Helvetica", 9)
-                self.c.drawString(40, self.y, item.item_type)
-                self.c.drawString(80, self.y, item.product.order_code if item.product else "-")
-                self.c.drawString(150, self.y, desc[:30])
-                self.c.drawRightString(350, self.y, str(qty))
-                self.c.drawRightString(430, self.y, self.money(unit_price))
-                self.c.drawRightString(500, self.y, f"{margin}%")
-                self.c.drawRightString(570, self.y, self.money(line_total))
-
-                self.y -= 12
-                self.ensure_space()
-
-            # Area subtotal
-            self.c.setFont("Helvetica-Bold", 9)
-            self.c.drawRightString(570, self.y, self.money(area_total))
-            self.y -= 20
-
-        # Grand total
-        self.c.line(350, self.y, self.width - 40, self.y)
-        self.y -= 15
-        self.c.setFont("Helvetica-Bold", 11)
-        self.c.drawRightString(
-            self.width - 40,
-            self.y,
-            f"Grand Total: {self.money(grand_total)}"
-        )
-
-        self.draw_footer()
-        self.c.showPage()
-        self.c.save()
-        return self.response
-
+                data.append([
+                    item.item_type,
+                    Paragraph(item_code, self.style_normal),
+                    Paragraph(raw_desc, self.style_normal),
+                    str(qty),
+                    self._format_currency(selling_rate),
+                    self._format_currency(line_total)
+                ])
+            data.append(["", "", "Area Subtotal:", "", "", self._format_currency(area_total)])
+            table = Table(data, colWidths=col_widths, repeatRows=1)
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.Color(0.9, 0.9, 0.9)),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 9),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('ALIGN', (3, 1), (-1, -1), 'RIGHT'),
+                ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ]))
+            elements.append(table)
+            elements.append(Spacer(1, 20))
+        elements.append(Paragraph(f"Grand Total: {self._format_currency(grand_total)}", ParagraphStyle('Total', parent=self.styles['Normal'], alignment=TA_RIGHT, fontSize=12, fontName='Helvetica-Bold')))
+        doc.build(elements, onFirstPage=self._header_footer, onLaterPages=self._header_footer)
+        self.buffer.seek(0)
+        response = HttpResponse(self.buffer, content_type="application/pdf")
+        filename = f"BOQ_{self.boq.project.name}_V{self.boq.version}_{self.boq.status}.pdf"
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return response
 
 @transaction.atomic
-def generate_boq(project):
-    # 1️⃣ Determine next version
-    last_boq = BOQ.objects.filter(project=project).order_by('-version').first()
-    next_version = 1 if not last_boq else last_boq.version + 1
+def generate_boq(project, user):
+    """
+    ERP-grade BOQ generation.
 
-    boq = BOQ.objects.create(
+    Rules:
+    - BOQ generated only from active configuration
+    - One BOQ per configuration version
+    - Supports project-level and area-wise configs
+    - Append-only versioning
+    """
+
+    # -----------------------------
+    # 1. LOAD PROJECT SAFELY
+    # -----------------------------
+    project_id = None
+
+    if hasattr(project, "id"):
+        project_id = project.id
+    elif isinstance(project, dict):
+        project_id = project.get("id")
+    else:
+        project_id = project
+
+    if not project_id:
+        raise ValidationError("Invalid project reference")
+
+    try:
+        project = Project.objects.get(id=project_id)
+    except Project.DoesNotExist:
+        raise ValidationError("Project not found")
+
+    # -----------------------------
+    # 2. LOAD ACTIVE CONFIGURATIONS
+    # -----------------------------
+    active_configs = LightingConfiguration.objects.filter(
         project=project,
-        version=next_version,
-        status="DRAFT"
+        is_active=True
+    ).select_related("area", "product")
+
+    if not active_configs.exists():
+        raise ValidationError(
+            "No active configurations found. "
+            "Please save configuration first."
+        )
+
+    # All configs must share same version
+    config_version = active_configs.first().configuration_version
+
+    # -----------------------------
+    # 3. PREVENT DUPLICATE BOQ
+    # -----------------------------
+    latest_boq = BOQ.objects.filter(project=project).order_by("-version").first()
+
+    if latest_boq and latest_boq.source_configuration_version == config_version:
+        raise ValidationError(
+            "BOQ already generated for the current configuration version."
+        )
+
+    # -----------------------------
+    # 4. DETERMINE NEXT BOQ VERSION
+    # -----------------------------
+    latest_version = (
+        BOQ.objects.filter(project=project)
+        .aggregate(max_v=Max("version"))
+        .get("max_v") or 0
     )
 
-    configs = LightingConfiguration.objects.filter(area__project=project)
+    next_boq_version = latest_version + 1
 
-    for config in configs:
+    # -----------------------------
+    # 5. CREATE BOQ HEADER
+    # -----------------------------
+    boq = BOQ.objects.create(
+    project=project,
+    version=next_boq_version,
+    created_by=user,
+    status="DRAFT",
+    source_configuration_version=config_version,
+    )
+
+    # -----------------------------
+    # 6. CREATE BOQ ITEMS
+    # -----------------------------
+    seen_products = set()
+
+    for config in active_configs:
+
         area = config.area
         product = config.product
 
-        # PRODUCT
-        unit_price = product.base_price
-        final_price = unit_price * config.quantity
+        # Prevent duplicates
+        area_key = area.id if area else "PROJECT"
+        key = (area_key, product.prod_id)
 
-        BOQItem.objects.create(
+        if key in seen_products:
+            continue
+
+        seen_products.add(key)
+
+        # -------------------------
+        # PRODUCT ITEM
+        # -------------------------
+        product_price = getattr(product, "base_price", 0)
+        product_total = product_price * config.quantity
+
+        product_item = BOQItem.objects.create(
             boq=boq,
             area=area,
             item_type="PRODUCT",
             product=product,
             quantity=config.quantity,
-            unit_price=unit_price,
-            final_price=final_price
+            unit_price=product_price,
+            markup_pct=0,
+            final_price=product_total,
         )
 
-        # DRIVER
-        config_driver = getattr(config, "configuration_driver", None)
-        if config_driver:
-            driver = config_driver.driver
-            unit_price = driver.base_price
-            final_price = unit_price * config_driver.quantity
+        # -------------------------
+        # DRIVER ITEMS
+        # -------------------------
+        drivers = ConfigurationDriver.objects.filter(configuration=config)
+
+        for drv in drivers:
+            driver = drv.driver
+            driver_price = getattr(driver, "base_price", 0)
+            driver_total = driver_price * drv.quantity
 
             BOQItem.objects.create(
                 boq=boq,
                 area=area,
                 item_type="DRIVER",
                 driver=driver,
-                quantity=config_driver.quantity,
-                unit_price=unit_price,
-                final_price=final_price
+                quantity=drv.quantity,
+                unit_price=driver_price,
+                markup_pct=0,
+                final_price=driver_total,
             )
 
-        # ACCESSORIES
+        # -------------------------
+        # ACCESSORY ITEMS
+        # -------------------------
         accessories = ConfigurationAccessory.objects.filter(configuration=config)
+
         for acc in accessories:
-            unit_price = acc.accessory.base_price
-            qty = acc.quantity * config.quantity
-            final_price = unit_price * qty
+            accessory = acc.accessory
+            acc_price = getattr(accessory, "base_price", 0)
+            acc_total = acc_price * acc.quantity
 
             BOQItem.objects.create(
                 boq=boq,
                 area=area,
                 item_type="ACCESSORY",
-                accessory=acc.accessory,
-                quantity=qty,
-                unit_price=unit_price,
-                final_price=final_price
+                accessory=accessory,
+                quantity=acc.quantity,
+                unit_price=acc_price,
+                markup_pct=0,
+                final_price=acc_total,
             )
 
-    return boq
+    # -----------------------------
+    # 7. RETURN RESULT
+    # -----------------------------
+    return {
+        "boq_id": boq.id,
+        "version": boq.version,
+        "status": boq.status,
+        "source_configuration_version": config_version,
+    }
 
-
-def get_project_boq_summary(project):
-    """
-    Returns project-wise BOQ summary
-    Aggregated by item_type and item_id
-    Uses latest BOQ
-    """
-
-    boq = (
-        BOQ.objects
-        .filter(project=project)
-        .order_by('-version')
-        .first()
-    )
-
+def get_boq_summary(boq):
     if not boq:
         return None
-
-    items = (
-        BOQItem.objects
-        .filter(boq=boq)
-        .values(
-            'item_type',
-            'product_id',
-            'driver_id',
-            'accessory_id'
-        )
-        .annotate(total_qty=Sum('quantity'))
-        # .order_by('item_type', 'item_id')
+    items = BOQItem.objects.filter(boq=boq).values("item_type").annotate(
+        total_qty=Sum("quantity"), 
+        total_value=Sum("final_price")
     )
-
-    summary = {
-        'PRODUCT': [],
-        'DRIVER': [],
-        'ACCESSORY': [],
-    }
-
+    summary = {}
     for item in items:
-        if item['item_type'] == 'PRODUCT':
-            summary['PRODUCT'].append({
-                'product_id': item['product_id'],
-                'quantity': item['total_qty']
-            })
-
-        elif item['item_type'] == 'DRIVER':
-            summary['DRIVER'].append({
-                'driver_id': item['driver_id'],
-                'quantity': item['total_qty']
-            })
-
-        elif item['item_type'] == 'ACCESSORY':
-            summary['ACCESSORY'].append({
-                'accessory_id': item['accessory_id'],
-                'quantity': item['total_qty']
-            })
-
+        summary[item["item_type"]] = {
+            "quantity": item["total_qty"], 
+            "amount": float(item["total_value"] or 0)
+        }
     return {
-        'project_id': project.id,
-        'boq_id': boq.id,
-        'summary': summary
+        "project_id": boq.project.id, 
+        "boq_id": boq.id, 
+        "version": boq.version, 
+        "status": boq.status, 
+        "summary": summary,
+        "created_at": boq.created_at,
+        "source_configuration_version": boq.source_configuration_version
     }
-    
-
-def approve_boq(boq):
-    """
-    Approve a BOQ.
-    Rules:
-    - Only DRAFT BOQ can be approved
-    - Approved BOQ becomes immutable
-    """
-
-    if boq.status != 'DRAFT':
-        raise ValidationError(
-            f"BOQ v{boq.version} is already {boq.status}"
-        )
-
-    with transaction.atomic():
-        boq.status = 'FINAL'
-        boq.locked_at = timezone.now()
-        boq.save(update_fields=['status', 'locked_at'])
-
-    return boq
-
 
 def get_project_boq_summary(project):
-    """
-    Returns project-wise BOQ summary
-    Aggregated by item_type and item_id
-    Uses latest BOQ
-    """
-
-    boq = (
-        BOQ.objects
-        .filter(project=project)
-        .order_by('-version')
-        .first()
-    )
-
-    if not boq:
-        return None
-
-    items = (
-        BOQItem.objects
-        .filter(boq=boq)
-        .values(
-            'item_type',
-            'product_id',
-            'driver_id',
-            'accessory_id'
-        )
-        .annotate(total_qty=Sum('quantity'))
-        # .order_by('item_type', 'item_id')
-    )
-
-    summary = {
-        'PRODUCT': [],
-        'DRIVER': [],
-        'ACCESSORY': [],
-    }
-
-    for item in items:
-        if item['item_type'] == 'PRODUCT':
-            summary['PRODUCT'].append({
-                'product_id': item['product_id'],
-                'quantity': item['total_qty']
-            })
-
-        elif item['item_type'] == 'DRIVER':
-            summary['DRIVER'].append({
-                'driver_id': item['driver_id'],
-                'quantity': item['total_qty']
-            })
-
-        elif item['item_type'] == 'ACCESSORY':
-            summary['ACCESSORY'].append({
-                'accessory_id': item['accessory_id'],
-                'quantity': item['total_qty']
-            })
-
-    return {
-        'project_id': project.id,
-        'boq_id': boq.id,
-        'summary': summary
-    }
-    
+    boq = BOQ.objects.filter(project=project).order_by("-version").first()
+    return get_boq_summary(boq)
 
 def approve_boq(boq):
     if boq.status != "DRAFT":
         raise ValidationError("Already finalized")
-
     boq.status = "FINAL"
     boq.locked_at = timezone.now()
     boq.save()
-
-
-def apply_margin_to_boq(boq, markup_pct):
-    """
-    Apply margin to all BOQ items.
-    Only allowed when BOQ is in DRAFT state.
-    """
-
-    if boq.status != "DRAFT":
-        raise ValidationError("Cannot modify FINAL BOQ")
-
-    markup_pct = Decimal(markup_pct)
-
-    for item in boq.items.all():
-        item.markup_pct = markup_pct
-        item.final_price = (
-            item.unit_price * item.quantity * (Decimal(1) + markup_pct / Decimal(100))
-        )
-        item.save()
-
     return boq
 
+def apply_margin_to_boq(boq, markup_pct):
+    if boq.status != "DRAFT":
+        raise ValidationError("Cannot modify FINAL BOQ")
+    markup_pct = Decimal(markup_pct)
+    for item in boq.items.all():
+        item.markup_pct = markup_pct
+        item.final_price = Decimal(item.unit_price) * Decimal(item.quantity) * (Decimal(1) + markup_pct / Decimal(100))
+        item.save(update_fields=["markup_pct", "final_price"])
+    return boq
 
 class BOQExcelBuilder:
     def __init__(self, boq):
@@ -431,155 +363,66 @@ class BOQExcelBuilder:
         self.wb = openpyxl.Workbook()
         self.ws = self.wb.active
         self.ws.title = "BOQ"
-
         self.row = 1
 
-    # ---------------- HELPERS ---------------- #
-
-    def money(self, value):
-        return float(round(Decimal(value), 2))
-
-    def bold(self):
-        return Font(bold=True)
-
-    def center(self):
-        return Alignment(horizontal="center")
-
-    def right(self):
-        return Alignment(horizontal="right")
+    def money(self, value): return float(round(Decimal(value), 2))
+    def bold(self): return openpyxl.styles.Font(bold=True)
+    def center(self): return openpyxl.styles.Alignment(horizontal="center")
+    def right(self): return openpyxl.styles.Alignment(horizontal="right")
 
     def write(self, col, value, bold=False, align=None, currency=False):
         cell = self.ws.cell(row=self.row, column=col, value=value)
-        if bold:
-            cell.font = self.bold()
-        if align:
-            cell.alignment = align
-        if currency:
-            cell.number_format = '₹#,##0.00'
+        if bold: cell.font = self.bold()
+        if align: cell.alignment = align
+        if currency: cell.number_format = '₹#,##0.00'
         return cell
 
-    def next_row(self, gap=1):
-        self.row += gap
-
-    # ---------------- HEADER ---------------- #
-
-    def build_header(self):
+    def build(self):
+        if self.boq.status != "FINAL": raise ValidationError("Excel export is allowed only for FINAL BOQ")
         self.write(1, "TVUM TECH", bold=True)
-        self.next_row()
-
+        self.row += 1
         self.write(1, "Lighting ERP – Bill of Quantities", bold=True)
-        self.next_row(2)
-
-        self.write(1, "Project:", bold=True)
-        self.write(2, self.boq.project.name)
-
-        self.write(5, "BOQ Version:", bold=True)
-        self.write(6, self.boq.version)
-
-        self.next_row()
-
-        self.write(1, "Status:", bold=True)
-        self.write(2, self.boq.status)
-
-        self.write(5, "Date:", bold=True)
-        self.write(6, date.today().strftime("%d-%m-%Y"))
-
-        self.next_row(2)
-
-    # ---------------- TABLE HEADER ---------------- #
-
-    def table_header(self):
-        headers = [
-            "Type",
-            "Item Code",
-            "Description",
-            "Qty",
-            "Unit Price (₹)",
-            "Margin (%)",
-            "Line Total (₹)",
-        ]
-
-        for col, header in enumerate(headers, start=1):
-            self.write(col, header, bold=True, align=self.center())
-
-        self.next_row()
-
-    # ---------------- CONTENT ---------------- #
-
-    def build_items(self):
+        self.row += 2
+        self.write(1, "Project:", bold=True); self.write(2, self.boq.project.name)
+        self.write(5, "Version:", bold=True); self.write(6, self.boq.version)
+        self.row += 1
+        self.write(1, "Status:", bold=True); self.write(2, self.boq.status)
+        self.write(5, "Date:", bold=True); self.write(6, date.today().strftime("%d-%m-%Y"))
+        self.row += 2
         grand_total = Decimal(0)
-
-        areas = (
-            self.boq.items
-            .select_related("area")
-            .order_by("area__name")
-            .values_list("area__id", "area__name")
-            .distinct()
-        )
-
+        areas = self.boq.items.select_related("area").order_by("area__name").values_list("area__id", "area__name").distinct()
         for area_id, area_name in areas:
-            self.write(1, f"Area: {area_name}", bold=True)
-            self.next_row()
-
-            self.table_header()
+            self.write(1, f"Area: {area_name}", bold=True); self.row += 1
+            headers = ["Type", "Item Code", "Description", "Qty", "Unit Price (₹)", "Margin (%)", "Line Total (₹)"]
+            for col, h in enumerate(headers, start=1): self.write(col, h, bold=True, align=self.center())
+            self.row += 1
             area_total = Decimal(0)
-
-            items = self.boq.items.filter(area_id=area_id)
-
-            for item in items:
+            for item in self.boq.items.filter(area_id=area_id):
                 qty = Decimal(item.quantity)
                 unit_price = Decimal(item.unit_price or 0)
                 margin = Decimal(item.markup_pct or 0)
-
-                line_total = qty * unit_price * (1 + margin / 100)
-
+                line_total = Decimal(item.final_price or 0)
                 area_total += line_total
                 grand_total += line_total
-
-                description = (
-                    item.product.make if item.product else
-                    item.driver.driver_type if item.driver else
-                    item.accessory.accessory_type
-                )
-
+                desc = "-"
+                if item.item_type == "PRODUCT" and item.product: desc = item.product.make
+                elif item.item_type == "DRIVER" and item.driver: desc = item.driver.driver_type
+                elif item.item_type == "ACCESSORY" and item.accessory: desc = item.accessory.accessory_type
                 self.write(1, item.item_type)
                 self.write(2, item.product.order_code if item.product else "-")
-                self.write(3, description)
+                self.write(3, desc)
                 self.write(4, int(qty), align=self.center())
                 self.write(5, self.money(unit_price), align=self.right(), currency=True)
                 self.write(6, float(margin), align=self.center())
                 self.write(7, self.money(line_total), align=self.right(), currency=True)
-
-                self.next_row()
-
-            # Area subtotal
+                self.row += 1
             self.write(6, "Area Total", bold=True, align=self.right())
             self.write(7, self.money(area_total), bold=True, currency=True)
-            self.next_row(2)
-
-        # Grand total
+            self.row += 2
         self.write(6, "Grand Total", bold=True, align=self.right())
         self.write(7, self.money(grand_total), bold=True, currency=True)
-
-    # ---------------- FORMAT ---------------- #
-
-    def auto_size(self):
-        for col in range(1, 8):
-            self.ws.column_dimensions[get_column_letter(col)].width = 20
-
-    # ---------------- RESPONSE ---------------- #
-
-    def build(self):
-        self.build_header()
-        self.build_items()
-        self.auto_size()
-
-        response = HttpResponse(
-            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-        response["Content-Disposition"] = (
-            f'attachment; filename="BOQ_{self.boq.project.name}_V{self.boq.version}.xlsx"'
-        )
-
+        for col in range(1, 8): self.ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 20
+        response = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        response["Content-Disposition"] = f'attachment; filename="BOQ_{self.boq.project.name}_V{self.boq.version}.xlsx"'
         self.wb.save(response)
         return response

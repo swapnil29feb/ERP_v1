@@ -1,0 +1,482 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Lighting ERP{% endblock %}</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+
+<body>
+    <!-- Global Loader -->
+    <div id="global-loader">
+        <div style="margin-bottom: 1rem; color: var(--primary); font-size: 2rem;">
+            <i class="fa-solid fa-circle-notch fa-spin"></i>
+        </div>
+        <div style="color: var(--text-main); font-weight: 500;">Loading...</div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <div class="wrapper">
+        <!-- Left Sidebar -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header" onclick="Layout.toggleSidebar()" style="cursor: pointer;">
+                <i class="fa-solid fa-bolt" style="color: var(--primary); margin-right: 10px;"></i>
+                <span>Lighting ERP</span>
+            </div>
+
+            <ul class="sidebar-menu">
+                <li>
+                    <a href="/projects/" class="{% if '/projects/' in request.path %}active{% endif %}">
+                        <i class="fa-solid fa-folder-open"></i> <span>Projects</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/masters/" class="{% if '/masters/' in request.path %}active{% endif %}">
+                        <i class="fa-solid fa-shapes"></i> <span>Masters</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/boq/" class="{% if '/boq/' in request.path %}active{% endif %}">
+                        <i class="fa-solid fa-file-contract"></i> <span>BOQ</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/audit/logs/" class="{% if '/audit/logs/' in request.path %}active{% endif %}">
+                        <i class="fa-solid fa-clipboard-list"></i> <span>Audit Logs</span>
+                    </a>
+                </li>
+            </ul>
+
+            <!-- Global Search -->
+            <div style="padding: 0 1rem; margin-top: auto; margin-bottom: 1rem;">
+                <div style="position: relative;">
+                    <i class="fa-solid fa-search"
+                        style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.8rem;"></i>
+                    <input type="text" id="global-search" placeholder="Jump to Project..."
+                        style="width: 100%; padding: 8px 8px 8px 30px; border-radius: 6px; border: 1px solid #334155; background: #1e293b; color: white; font-size: 0.85rem;">
+                </div>
+            </div>
+
+            <div class="user-panel">
+                <div class="user-avatar">
+                    <span id="user-avatar-initials">U</span>
+                </div>
+                <div class="user-info">
+                    <div id="user-username">User</div>
+                    <div id="user-role-badge" class="role-badge badge-viewer"
+                        style="display: inline-block; margin-top: 2px;">Viewer</div>
+                </div>
+                <button onclick="Layout.logout()" class="btn-logout" title="Logout">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <div class="top-nav">
+                <div class="breadcrumbs" id="breadcrumbs">
+                     {% block header_title %}Page Title{% endblock %}
+                </div>
+                <div class="header-controls">
+                    {% block header_controls %}{% endblock %}
+                </div>
+            </div>
+
+            <div class="canvas-padding">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+
+        <!-- Right Pane (Audit Logs) -->
+        <aside class="right-pane" id="right-audit-pane">
+            <div class="right-pane-header">
+                <h3><i class="fa-solid fa-history"></i> Audit Logs</h3>
+                <button onclick="toggleAuditPane()" class="btn-icon"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="right-pane-content" id="audit-log-feed">
+                <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                    <i class="fa-solid fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                    <p>Loading audit logs...</p>
+                </div>
+            </div>
+            <!-- Logout button at bottom of audit panel -->
+            <div class="right-pane-footer">
+                <button onclick="Layout.logout()" class="btn btn-danger" style="width: 100%;">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    Logout
+                </button>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Floating Action Button for Audit Logs -->
+    <button class="fab-audit" onclick="toggleAuditPane()" title="Audit Logs">
+        <i class="fa-solid fa-history"></i>
+    </button>
+
+    <style>
+        /* Right Pane Enhancements */
+        .right-pane {
+            position: fixed;
+            right: -450px;
+            top: 0;
+            width: 450px;
+            height: 100vh;
+            background: var(--sidebar-bg);
+            border-left: 1px solid var(--card-border);
+            display: flex;
+            flex-direction: column;
+            transition: right var(--transition-base);
+            z-index: 1500;
+            box-shadow: var(--shadow-xl);
+        }
+
+        .right-pane.open {
+            right: 0;
+        }
+
+        .right-pane-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--spacing-lg);
+            border-bottom: 1px solid var(--card-border);
+            background: linear-gradient(135deg, var(--bg-card), hsla(220, 25%, 18%, 0.7));
+        }
+
+        .right-pane-header h3 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .right-pane-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--spacing-md);
+        }
+
+        .right-pane-footer {
+            padding: var(--spacing-md);
+            border-top: 1px solid var(--card-border);
+            background: hsla(220, 25%, 15%, 0.5);
+        }
+
+        /* Audit Log Items */
+        .audit-item {
+            padding: var(--spacing-md);
+            background: var(--bg-card);
+            border-radius: var(--radius-md);
+            border-left: 3px solid var(--primary);
+            margin-bottom: var(--spacing-sm);
+            transition: all var(--transition-base);
+        }
+
+        .audit-item:hover {
+            background: var(--bg-hover);
+            transform: translateX(-4px);
+        }
+
+        .audit-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 0.5rem;
+        }
+
+        .audit-action {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-main);
+            text-transform: uppercase;
+        }
+
+        .audit-time {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        .audit-user {
+            font-size: 0.8rem;
+            color: var(--primary-light);
+            font-weight: 600;
+        }
+
+        .audit-details {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        .audit-module {
+            display: inline-block;
+            padding: 0.125rem 0.5rem;
+            background: var(--primary-glow);
+            color: var(--primary-light);
+            border-radius: var(--radius-sm);
+            font-size: 0.7rem;
+            margin-top: 0.5rem;
+        }
+
+        /* Floating Action Button */
+        .fab-audit {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 56px;
+            height: 56px;
+            border-radius: var(--radius-full);
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border: none;
+            color: white;
+            font-size: 1.25rem;
+            cursor: pointer;
+            box-shadow: 0 4px 12px var(--primary-glow);
+            transition: all var(--transition-base);
+            z-index: 1400;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .fab-audit:hover {
+            transform: scale(1.1) rotate(15deg);
+            box-shadow: 0 6px 20px var(--primary-glow);
+        }
+
+        .fab-audit:active {
+            transform: scale(0.95);
+        }
+
+        @media (max-width: 768px) {
+            .right-pane {
+                width: 100%;
+                right: -100%;
+            }
+        }
+
+        /* Drawer Styles (Side Modals) */
+        .drawer-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: hsla(220, 30%, 8%, 0.6);
+            backdrop-filter: blur(8px);
+            z-index: 1900;
+            display: none;
+            opacity: 0;
+            transition: opacity var(--transition-base);
+        }
+
+        .drawer-overlay.open {
+            display: block !important;
+            opacity: 1;
+        }
+
+        .drawer {
+            position: fixed;
+            top: 0;
+            right: -600px;
+            width: 500px;
+            max-width: 90%;
+            height: 100vh;
+            background: var(--bg-card) !important;
+            backdrop-filter: blur(25px);
+            border-left: 1px solid var(--card-border);
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            transition: right var(--transition-base);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .drawer.open {
+            right: 0;
+        }
+
+        .drawer-header {
+            margin-top: 0;
+            padding: var(--spacing-lg);
+            border-bottom: 1px solid var(--card-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: hsla(220, 25%, 12%, 0.5);
+        }
+
+        .drawer-header h3 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .drawer-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--spacing-lg);
+        }
+
+        .drawer-footer {
+            padding: var(--spacing-lg);
+            border-top: 1px solid var(--card-border);
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: var(--spacing-sm);
+            background: hsla(220, 25%, 12%, 0.5);
+        }
+
+        /* Modal & Overlay Styles */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-lg);
+        }
+
+        .modal-overlay.open {
+            display: flex !important;
+        }
+
+        .modal {
+            background: var(--bg-canvas);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-md);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .modal-header {
+            padding: var(--spacing-md);
+            border-bottom: 1px solid var(--card-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: hsla(220, 25%, 12%, 0.5);
+        }
+
+        .modal-title {
+            margin: 0;
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .modal-body {
+            flex: 1;
+            padding: var(--spacing-lg);
+            overflow-y: auto;
+        }
+
+        .modal-footer {
+            padding: var(--spacing-md);
+            border-top: 1px solid var(--card-border);
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: var(--spacing-sm);
+            background: hsla(220, 25%, 12%, 0.5);
+        }
+    </style>
+
+    <script>
+        function toggleAuditPane() {
+            const pane = document.getElementById('right-audit-pane');
+            pane.classList.toggle('open');
+
+            // Load audit logs when opening
+            if (pane.classList.contains('open')) {
+                loadAuditLogs();
+            }
+        }
+
+        async function loadAuditLogs() {
+            const feed = document.getElementById('audit-log-feed');
+
+            try {
+                const response = await API.get('/common/audit/logs/');
+
+                if (response && response.results && response.results.length > 0) {
+                    feed.innerHTML = response.results.map(log => `
+                        <div class="audit-item">
+                            <div class="audit-item-header">
+                                <span class="audit-action">${log.action}</span>
+                            </div>
+                            <div class="audit-user">
+                                by ${log.actor}
+                            </div>
+                            <div class="audit-time">${log.timestamp}</div>
+                            <div class="audit-details" style="margin-top: 0.75rem; font-weight: 600;">
+                                ${log.object}
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    feed.innerHTML = `
+                        <div style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                            <i class="fa-solid fa-inbox" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;"></i>
+                            <p>No audit logs available</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Failed to load audit logs:', error);
+                feed.innerHTML = `
+                    <div style="text-align: center; padding: 3rem;">
+                        <i class="fa-solid fa-exclamation-triangle" style="font-size: 3rem; color: var(--error); margin-bottom: 1rem;"></i>
+                        <p style="color: var(--error);">Failed to load audit logs</p>
+                        <button onclick="loadAuditLogs()" class="btn btn-secondary" style="margin-top: 1rem;">
+                            <i class="fa-solid fa-refresh"></i> Retry
+                        </button>
+                    </div>
+                `;
+            }
+        }
+    </script>
+
+    <!-- Scripts -->
+    <script>
+        // Expose CSRF if available (Template Context)
+        window.CSRF_TOKEN = "{{ csrf_token }}";
+        // Legacy/Global API Base
+        const API_BASE = 'http://127.0.0.1:8000/api';
+    </script>
+    <!-- Core Scripts -->
+    <script src="{% static 'js/utils.js' %}"></script>
+    <script src="{% static 'js/modals.js' %}"></script>
+    <script src="{% static 'js/api_client.js' %}"></script>
+    <script src="{% static 'js/layout.js' %}"></script>
+
+    <script>
+        // Inline init if specific params needed, usually layout.js handles it.
+    </script>
+
+    {% block scripts %}{% endblock %}
+
+    <!-- Modal Block (for direct body children) -->
+    {% block modals %}{% endblock %}
+</body>
+
+</html>

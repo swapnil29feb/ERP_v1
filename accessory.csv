@@ -1,0 +1,16 @@
+id,accessory_name,accessory_type,description,accessory_category,compatible_ip_class,compatible_mounting_styles,max_diameter_mm,min_diameter_mm,base_price
+1,Spring Clip Kit,Recessed Mount Spring Clamp,Stainless steel spring clips for recessed downlight installation,MOUNTING,20,"[""RECESSED""]",120,75,120
+2,Surface Mounting Ring,Decorative Trim Ring,Chrome/matte finish surface mounting ring,MOUNTING,20,"[""SURFACE""]",,,150
+3,Track Mounting Adapter,Standard Track System Adapter,Universal track adapter for 48V track systems,MOUNTING,,"[""TRACK MOUNTED""]",,,200
+4,Ground Spike Kit,Inground Anchor Spike,Stainless steel ground spike anchor for landscape lights,MOUNTING,67,"[""INGROUND""]",,,180
+5,Universal Mounting Bracket,Multi-Style Mounting Bracket,Adjustable aluminum bracket supports multiple mounting styles,MOUNTING,,"[""SURFACE"", ""RECESSED"", ""INGROUND""]",,,250
+6,Honeycomb Louver,Anti-Glare Louver,Aluminum honeycomb louver reduces glare and light scatter,OPTICAL,,"[""RECESSED"", ""SURFACE""]",110,75,180
+7,Anti-Glare Shield,Baffle Diffuser,Prevents direct glare from spotlights,OPTICAL,,"[""TRACK MOUNTED""]",,,120
+8,Frosted Glass Diffuser,Optical Grade Diffuser Panel,Frosted PMMA diffuser for even light distribution,OPTICAL,,"[""SURFACE"", ""RECESSED""]",500,150,220
+9,Linear Lens Assembly,Optical Lens System,Linear optics for beam shaping and control,OPTICAL,,"[""SURFACE""]",,,280
+10,UV Filter,UV Protection Filter,"Blocks UV radiation, extends product life",OPTICAL,,"[""OUTDOOR""]",,,150
+11,Decorative Trim Ring - Chrome,Finish Ring,Chrome plated decorative finish ring,DECORATIVE,,"[""RECESSED"", ""SURFACE""]",120,75,200
+12,Finish Ring - Matte Black,Matte Trim Ring,Matte black aluminum trim ring,DECORATIVE,,"[""RECESSED"", ""SURFACE""]",120,75,180
+13,IP67 Gasket Kit,Waterproof Sealing Kit,EPDM gasket kit for IP67 weatherproof sealing,INSTALLATION,67,"[""INGROUND"", ""SURFACE""]",,,250
+14,Connector Cable Assembly,Wire Harness,3-pin/4-pin connector cable for driver connection,INSTALLATION,,"[""SURFACE"", ""RECESSED"", ""TRACK MOUNTED"", ""INGROUND""]",,,100
+15,Thermal Management Pad,Heat Sink Thermal Interface,Silicone thermal pad improves heat dissipation,INSTALLATION,,"[""SURFACE"", ""RECESSED""]",,,80

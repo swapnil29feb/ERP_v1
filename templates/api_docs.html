@@ -1,0 +1,199 @@
+{% extends 'authentic/base.html' %}
+{% load static %}
+
+{% block title %}API Documentation | Lighting ERP{% endblock %}
+{% block header_title %}API Documentation{% endblock %}
+
+{% block content %}
+<div style="padding: 2rem;">
+    <div class="card" style="margin-bottom: 2rem;">
+        <h3 style="margin-bottom: 1rem;">Available API Endpoints</h3>
+        <p style="color: var(--text-secondary);">Below are all the available API endpoints for the Lighting ERP system.
+        </p>
+    </div>
+
+    <!-- Projects API -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+        <h4 style="color: var(--primary-light); margin-bottom: 1rem;">
+            <i class="fa-solid fa-folder-open"></i> Projects API
+        </h4>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Method</th>
+                        <th>Endpoint</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="badge badge-success">GET</span></td>
+                        <td><code>/api/projects/</code></td>
+                        <td>List all projects</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-success">GET</span></td>
+                        <td><code>/api/projects/{id}/</code></td>
+                        <td>Get project details</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-primary">POST</span></td>
+                        <td><code>/api/projects/</code></td>
+                        <td>Create new project</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-warning">PUT</span></td>
+                        <td><code>/api/projects/{id}/</code></td>
+                        <td>Update project</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-danger">DELETE</span></td>
+                        <td><code>/api/projects/{id}/</code></td>
+                        <td>Delete project</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-success">GET</span></td>
+                        <td><code>/api/projects/{id}/areas/</code></td>
+                        <td>List project areas</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-primary">POST</span></td>
+                        <td><code>/api/projects/{id}/areas/</code></td>
+                        <td>Create area in project</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- BOQ API -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+        <h4 style="color: var(--accent); margin-bottom: 1rem;">
+            <i class="fa-solid fa-file-invoice-dollar"></i> BOQ API
+        </h4>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Method</th>
+                        <th>Endpoint</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="badge badge-primary">POST</span></td>
+                        <td><code>/api/boq/generate/{project_id}/</code></td>
+                        <td>Generate BOQ for project</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-success">GET</span></td>
+                        <td><code>/api/boq/summary/{project_id}/</code></td>
+                        <td>Get BOQ summary</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-primary">POST</span></td>
+                        <td><code>/api/boq/approve/{boq_id}/</code></td>
+                        <td>Approve BOQ</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-success">GET</span></td>
+                        <td><code>/api/boq/export/pdf/{boq_id}/</code></td>
+                        <td>Export BOQ as PDF</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-success">GET</span></td>
+                        <td><code>/api/boq/export/excel/{boq_id}/</code></td>
+                        <td>Export BOQ as Excel</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-primary">POST</span></td>
+                        <td><code>/api/boq/apply-margin/{boq_id}/</code></td>
+                        <td>Apply margin to BOQ</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Auth & Common API -->
+    <div class="card">
+        <h4 style="color: var(--success); margin-bottom: 1rem;">
+            <i class="fa-solid fa-shield-halved"></i> Authentication & Common API
+        </h4>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Method</th>
+                        <th>Endpoint</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="badge badge-primary">POST</span></td>
+                        <td><code>/api/auth/login/</code></td>
+                        <td>Login and get JWT token</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-primary">POST</span></td>
+                        <td><code>/api/auth/refresh/</code></td>
+                        <td>Refresh JWT token</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-success">GET</span></td>
+                        <td><code>/api/common/auth/me/</code></td>
+                        <td>Get current user info</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-success">GET</span></td>
+                        <td><code>/api/common/audit/logs/</code></td>
+                        <td>Get audit logs</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    code {
+        background: var(--bg-hover);
+        padding: 0.25rem 0.5rem;
+        border-radius: var(--radius-sm);
+        font-family: 'Courier New', monospace;
+        color: var(--primary-light);
+        font-size: 0.85rem;
+    }
+
+    .badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .badge-success {
+        background: var(--success-bg);
+        color: var(--success);
+    }
+
+    .badge-primary {
+        background: var(--primary-glow);
+        color: var(--primary-light);
+    }
+
+    .badge-warning {
+        background: var(--warning-bg);
+        color: var(--warning);
+    }
+
+    .badge-danger {
+        background: var(--error-bg);
+        color: var(--error);
+    }
+</style>
+{% endblock %}

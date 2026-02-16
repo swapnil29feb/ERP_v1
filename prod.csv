@@ -1,0 +1,15 @@
+prod_id,make,order_code,luminaire_color_ral,characteristics,diameter_mm,length_mm,width_mm,height_mm,mounting_style,beam_angle_degree,ip_class,wattage,op_voltage,op_current,lumen_output,cct_kelvin,cri_cci,lumen_efficency,weight_kg,warranty_years,website_link,visual_image,driver_integration,illustrative_details,photometrics,control_ready,cutout_diameter_mm,environment,electrical_type,base_price
+1,Philips,DL-10W-R,,"10W Recessed LED Downlight, Dimmable",,,,,RECESSED,60°,20,10,,,800,4000,,,,,,,EXTERNAL,,,NONE,85,INDOOR,CC,500
+2,Osram,DL-15W-CW,,"15W Recessed LED Downlight, Premium CRI>90",,,,,RECESSED,60°,20,15,,,1200,4000,,,,,,,EXTERNAL,,,NONE,95,INDOOR,CC,650
+3,GE Lighting,DL-20W-WW,,"Warm White Recessed LED, Ambient Lighting",,,,,RECESSED,45°,20,20,,,1600,3000,,,,,,,EXTERNAL,,,NONE,110,INDOOR,CC,750
+4,Havells,SPA-24W-NW,,"24W Surface Panel Light, Semi-flush mount",300,,,,SURFACE,,44,24,,,2000,4000,,,,,,,EXTERNAL,,,NONE,,INDOOR,CC,1200
+5,Crompton,SPA-36W-BR,,"36W Bright White Panel, Office/Commercial",450,,,,SURFACE,,44,36,,,3000,6500,,,,,,,EXTERNAL,,,NONE,,INDOOR,CC,1400
+6,Eaton,SPA-12W-RGB,,"RGB Tunable White Panel, Smart Home Ready",200,,,,SURFACE,,20,12,,,1000,4000,,,,,,,EXTERNAL,,,NONE,,INDOOR,CC,900
+7,Siemens,TS-20W-COB,,"Track Spotlight COB, Accent Lighting",,,,,TRACK MOUNTED,15°,20,20,,,1800,4000,,,,,,,EXTERNAL,,,NONE,,INDOOR,CC,850
+8,Legrand,TS-30W-FAN,,"High Power Track Spotlight, Retail Display",,,,,TRACK MOUNTED,24°,20,30,,,2700,3000,,,,,,,EXTERNAL,,,NONE,,INDOOR,CC,1100
+9,Philips,BO-12W-LED,,"Inground Bollard, IP67 Sealed",100,,,,INGROUND,,67,12,,,900,4000,,,,,,,INTEGRATED,,,NONE,,OUTDOOR,CC,1800
+10,Sylvania,GS-9W-STUD,,"Underground Landscape Light, Stainless Steel",85,,,,INGROUND,,67,9,,,650,3000,,,,,,,INTEGRATED,,,NONE,,OUTDOOR,CC,1500
+11,Cree,FL-50W-PROJ,,"Outdoor Flood Light, Stadium/Building",,,,,SURFACE,120°,65,50,,,4500,5000,,,,,,,EXTERNAL,,,NONE,,OUTDOOR,CC,2500
+12,Aurora,LN-14W-COVE,,"Linear Cove Light, Indirect Ambient",,600,,,SURFACE,,44,14,,,1100,3000,,,,,,,EXTERNAL,,,NONE,,INDOOR,CC,600
+13,Luceco,WW-24W-WASH,,"Wall Washer Light, Architectural",,,,,SURFACE,120°,20,24,,,2200,4000,,,,,,,EXTERNAL,,,NONE,,INDOOR,CC,1000
+14,Innolux,ST-28W-STRIP,,"Linear LED Strip, Task Lighting",,1200,,,SURFACE,,20,28,,,2400,6500,,,,,,,EXTERNAL,,,NONE,,INDOOR,CC,700

@@ -60,21 +60,46 @@ class LightingConfigurationSerializer(serializers.ModelSerializer):
         read_only=True
     )
 
+    # 🔑 CRITICAL: explicitly define subarea
+    subarea = serializers.PrimaryKeyRelatedField(
+        queryset=LightingConfiguration._meta.get_field("subarea").remote_field.model.objects.all()
+    )
+
+    area = serializers.PrimaryKeyRelatedField(
+        queryset=LightingConfiguration._meta.get_field("area").remote_field.model.objects.all()
+    )
+
+    product = serializers.PrimaryKeyRelatedField(
+        queryset=LightingConfiguration._meta.get_field("product").remote_field.model.objects.all()
+    )
+
     class Meta:
         model = LightingConfiguration
         fields = [
             "id",
             "project",
             "area",
+            "subarea",          # ✅ REQUIRED
             "product",
             "product_detail",
             "quantity",
             "driver",
-            "accessories"
+            "accessories",
+            "configuration_version",
+            "is_active",
         ]
-        read_only_fields = ("project",)
+        read_only_fields = (
+            "project",
+            "configuration_version",
+            "is_active",
+        )
 
     def create(self, validated_data):
+        """
+        ERP RULE:
+        - project is derived from area
+        - area + subarea MUST be preserved
+        """
         area = validated_data["area"]
         validated_data["project"] = area.project
         return super().create(validated_data)
@@ -101,8 +126,8 @@ class ConfigurationDriverSerializer(serializers.ModelSerializer):
         source="driver.driver_name",
         read_only=True
     )
-    driver_type = serializers.CharField(
-        source="driver.driver_type",
+    constant_type = serializers.CharField(
+        source="driver.constant_type",
         read_only=True
     )
     

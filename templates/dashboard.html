@@ -1,0 +1,227 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard | Lighting ERP{% endblock %}
+{% block header_title %}Dashboard{% endblock %}
+
+{% block header_controls %}
+<button class="btn btn-primary" onclick="Dashboard.openCreateModal()">
+    <i class="fa-solid fa-plus"></i> New Project
+</button>
+{% endblock %}
+
+{% block content %}
+<!-- Stats Overview -->
+<div class="grid grid-4" style="margin-bottom: 2rem;">
+        <div class="stats-card">
+            <div class="stats-icon"
+                style="background: linear-gradient(135deg, hsl(220, 90%, 56%), hsl(280, 85%, 60%));">
+                <i class="fa-solid fa-folder-open"></i>
+            </div>
+            <div class="stats-value" id="total-projects">0</div>
+            <div class="stats-label">Total Projects</div>
+        </div>
+
+        <div class="stats-card">
+            <div class="stats-icon"
+                style="background: linear-gradient(135deg, hsl(142, 76%, 45%), hsl(160, 76%, 50%));">
+                <i class="fa-solid fa-check-circle"></i>
+            </div>
+            <div class="stats-value" id="active-projects">0</div>
+            <div class="stats-label">Active Projects</div>
+        </div>
+
+        <div class="stats-card">
+            <div class="stats-icon" style="background: linear-gradient(135deg, hsl(38, 92%, 50%), hsl(45, 92%, 55%));">
+                <i class="fa-solid fa-lightbulb"></i>
+            </div>
+            <div class="stats-value" id="total-products">0</div>
+            <div class="stats-label">Products Configured</div>
+        </div>
+
+        <div class="stats-card">
+            <div class="stats-icon"
+                style="background: linear-gradient(135deg, hsl(340, 82%, 58%), hsl(350, 82%, 63%));">
+                <i class="fa-solid fa-file-invoice-dollar"></i>
+            </div>
+            <div class="stats-value" id="total-boqs">0</div>
+            <div class="stats-label">BOQs Generated</div>
+        </div>
+    </div>
+
+    <!-- Section Header -->
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+        <h3 style="font-size: 1.5rem; font-weight: 600;">
+            <i class="fa-solid fa-diagram-project" style="color: var(--primary); margin-right: 0.5rem;"></i>
+            Your Projects
+        </h3>
+        <div style="display: flex; gap: 0.75rem;">
+            <div style="position: relative;">
+                <i class="fa-solid fa-search"
+                    style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
+                <input type="text" id="project-search" placeholder="Search projects..."
+                    style="padding: 0.625rem 0.875rem 0.625rem 2.5rem; background: var(--bg-card); border: 1px solid var(--card-border); border-radius: var(--radius-md); color: var(--text-main); font-size: 0.9rem; min-width: 250px;">
+            </div>
+        </div>
+    </div>
+
+    <!-- Projects Grid -->
+    <div id="projects-grid" class="grid grid-3">
+        <!-- Injected via JS -->
+        <div class="card" style="text-align: center; padding: 3rem; opacity: 0.6;">
+            <i class="fa-solid fa-folder-open"
+                style="font-size: 3rem; color: var(--text-muted); margin-bottom: 1rem;"></i>
+            <p style="color: var(--text-secondary);">No projects yet. Create your first project to get started!</p>
+        </div>
+    </div>
+
+    <!-- Create Project Modal -->
+    <div class="modal-overlay" id="modal-create-project" style="display: none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i class="fa-solid fa-plus-circle" style="color: var(--primary); margin-right: 0.5rem;"></i>
+                    Create New Project
+                </h3>
+                <button type="button" class="btn-icon" onclick="Modals.close('modal-create-project')">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form id="form-create-project">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="p-name">
+                            Project Name <span style="color: var(--error);">*</span>
+                        </label>
+                        <input type="text" id="p-name" class="form-control" required
+                            placeholder="e.g. Skyline Tower Lighting Project">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="p-client">
+                            Client Name <span style="color: var(--error);">*</span>
+                        </label>
+                        <input type="text" id="p-client" class="form-control" required
+                            placeholder="e.g. ABC Corporation">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="p-code">Project Code</label>
+                        <input type="text" id="p-code" class="form-control" placeholder="Auto-generated if blank">
+                        <small
+                            style="color: var(--text-muted); font-size: 0.8rem; display: block; margin-top: 0.25rem;">
+                            Leave blank to auto-generate a unique code
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="p-desc">Description</label>
+                        <textarea id="p-desc" class="form-control" rows="4"
+                            placeholder="Provide a brief description of the project..."></textarea>
+                    </div>
+
+                    <div class="alert alert-error" id="project-error" style="display: none;"></div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="Modals.close('modal-create-project')">
+                        <i class="fa-solid fa-xmark"></i>
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa-solid fa-plus"></i>
+                        Create Project
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+<style>
+    /* Project Card Styles */
+    .project-card {
+        background: var(--bg-card);
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--card-border);
+        border-radius: var(--radius-lg);
+        padding: 1.5rem;
+        transition: all var(--transition-base);
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .project-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: linear-gradient(90deg, var(--primary), var(--accent));
+        transform: scaleX(0);
+        transition: transform var(--transition-base);
+    }
+
+    .project-card:hover::before {
+        transform: scaleX(1);
+    }
+
+    .project-card:hover {
+        border-color: var(--primary);
+        transform: translateY(-4px);
+        box-shadow: 0 12px 24px hsla(220, 90%, 56%, 0.2);
+    }
+
+    .project-card-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+
+    .project-card-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--text-main);
+        margin-bottom: 0.25rem;
+    }
+
+    .project-card-code {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        font-family: 'Courier New', monospace;
+        background: var(--bg-hover);
+        padding: 0.125rem 0.5rem;
+        border-radius: var(--radius-sm);
+    }
+
+    .project-card-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--card-border);
+    }
+
+    .project-card-meta-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+    }
+
+    .project-card-meta-item i {
+        width: 16px;
+        text-align: center;
+        color: var(--primary-light);
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/dashboard.js' %}"></script>
+{% endblock %}

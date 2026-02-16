@@ -1,0 +1,50 @@
+{% for product in products %}
+    <div class="master-card">
+        <div class="master-card-header">
+            <div style="flex: 1;">
+                <div class="master-card-title">{{ product.make }}</div>
+                <div class="master-card-subtitle">{{ product.order_code|default:"N/A" }}</div>
+            </div>
+            <div class="master-card-price">{{ product.base_price|default:0 }}</div>
+        </div>
+
+        <div class="master-card-meta">
+            {% if product.wattage %}
+                <div class="master-card-meta-item">
+                    <i class="fa-solid fa-bolt"></i>
+                    <span>{{ product.wattage }}W</span>
+                </div>
+            {% endif %}
+            {% if product.lumen_output %}
+                <div class="master-card-meta-item">
+                    <i class="fa-solid fa-sun"></i>
+                    <span>{{ product.lumen_output }} Lumens</span>
+                </div>
+            {% endif %}
+            {% if product.mounting_style %}
+                <div class="master-card-meta-item">
+                    <i class="fa-solid fa-wrench"></i>
+                    <span>{{ product.mounting_style }}</span>
+                </div>
+            {% endif %}
+            <div class="master-card-meta-item">
+                <i class="fa-solid fa-microchip"></i>
+                <span>{{ product.driver_integration|default:"EXTERNAL" }}</span>
+            </div>
+        </div>
+
+        <div class="master-card-actions">
+            <button class="btn btn-secondary" onclick="MastersPage.editProduct({{ product.prod_id }})">
+                <i class="fa-solid fa-edit"></i> Edit
+            </button>
+            <button class="btn btn-danger" onclick="MastersPage.deleteProduct({{ product.prod_id }})">
+                <i class="fa-solid fa-trash"></i>
+            </button>
+        </div>
+    </div>
+{% empty %}
+    <div class="card" style="text-align: center; padding: 3rem; grid-column: 1/-1;">
+        <i class="fa-solid fa-lightbulb" style="font-size: 3rem; color: var(--text-muted); opacity: 0.3; margin-bottom: 1rem;"></i>
+        <p style="color: var(--text-secondary);">No products yet. Add your first product!</p>
+    </div>
+{% endfor %}

@@ -4,9 +4,11 @@ import random
 class Driver(models.Model):
     driver_code = models.CharField(max_length=100, unique=True)
     driver_make = models.CharField(max_length=100)
-    driver_type = models.CharField(max_length=50)
+    # driver_type = models.CharField(max_length=50)
+    
 
-    input_voltage_range = models.CharField(max_length=100, null=True, blank=True)
+    input_voltage_min = models.IntegerField(null=True, blank=True)
+    input_voltage_max = models.IntegerField(null=True, blank=True)
     max_wattage = models.IntegerField(null=True, blank=True)
 
     dimmable = models.CharField(
@@ -14,6 +16,31 @@ class Driver(models.Model):
         choices=[('YES', 'Yes'), ('NO', 'No')],
         default='YES'
     )
+
+    output_current_ma = models.IntegerField(null=True, blank=True)
+    output_voltage_min = models.IntegerField(null=True, blank=True)
+    output_voltage_max = models.IntegerField(null=True, blank=True)
+
+    constant_type = models.CharField(
+        max_length=20,
+        choices=[('CC', 'Constant Current'), ('CV', 'Constant Voltage')],
+        default='CC'
+    )
+    dimming_protocol = models.CharField(
+        max_length=20,
+        choices=[
+            ('NONE', 'Non Dimmable'),
+            ('DALI', 'DALI'),
+            ('0-10V', '0-10V'),
+            ('1-10V', '1-10V'),
+            ('TRIAC', 'TRIAC')
+        ],
+        default='NONE'
+    )
+
+    ip_class = models.IntegerField(null=True, blank=True)
+    warranty_years = models.IntegerField(null=True, blank=True)
+
     
     base_price = models.DecimalField(
         max_digits=12,

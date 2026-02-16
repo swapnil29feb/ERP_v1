@@ -6,7 +6,7 @@ from decimal import Decimal
 class Product(models.Model):
     prod_id = models.AutoField(primary_key=True)
     make = models.CharField(max_length=100)
-    order_code = models.CharField(max_length=100, unique=True)
+    order_code = models.CharField(max_length=100, null=True)
 
     luminaire_color_ral = models.CharField(max_length=100, null=True, blank=True)
     characteristics = models.TextField(null=True, blank=True)
@@ -28,7 +28,7 @@ class Product(models.Model):
         null=True,
         blank=True
     )
-    beam_angle_degree = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    beam_angle_degree = models.CharField(max_length=100, blank=True, null=True)
     ip_class = models.IntegerField(null=True, blank=True)
 
     wattage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
@@ -45,6 +45,8 @@ class Product(models.Model):
 
     website_link = models.URLField(null=True, blank=True)
     visual_image = models.ImageField(upload_to='lighting_specs/images/', null=True, blank=True)
+    illustrative_details = models.ImageField(upload_to='lighting_specs/images/', null=True, blank=True)
+    photometrics = models.ImageField(upload_to='lighting_specs/images/', null=True, blank=True)
 
     base_price = models.DecimalField(
         max_digits= 10,
@@ -61,6 +63,23 @@ class Product(models.Model):
         max_length=15,
         choices=DRIVER_INTEGRATION_CHOICES,
         default='EXTERNAL'
+    )
+
+    cutout_diameter_mm = models.IntegerField(null=True, blank=True)
+    environment = models.CharField(
+        max_length=20,
+        choices=[('INDOOR', 'Indoor'), ('OUTDOOR', 'Outdoor')],
+        default='INDOOR'
+    )
+    control_ready = models.CharField(
+        max_length=20,
+        choices=[('NONE', 'None'), ('DALI', 'DALI'), ('0-10V', '0-10V')],
+        default='NONE'
+    )
+    electrical_type = models.CharField(
+        max_length=2,
+        choices=[('CC', 'Constant Current'), ('CV', 'Constant Voltage')],
+        default='CC'
     )
     
     def __str__(self):

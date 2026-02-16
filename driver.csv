@@ -1,0 +1,11 @@
+id,driver_code,driver_make,max_wattage,dimmable,constant_type,dimming_protocol,input_voltage_max,input_voltage_min,ip_class,output_current_ma,output_voltage_max,output_voltage_min,warranty_years,base_price
+1,CC-350MA-15W,Meanwell,15,NO,CC,NONE,240,180,20,350,48,24,2,400
+2,CC-350MA-DALI,Tridonic,15,YES,CC,DALI,240,180,20,350,48,24,5,600
+3,CC-700MA-30W,Meanwell,30,NO,CC,NONE,240,180,20,700,48,32,2,550
+4,CC-700MA-0-10V,Philips,30,YES,CC,0-10V,240,180,20,700,48,32,3,650
+5,CC-1050MA-50W,Meanwell,50,NO,CC,NONE,240,180,20,1050,48,32,2,700
+6,CC-1050MA-DALI,Osram,50,YES,CC,DALI,240,180,20,1050,48,32,5,900
+7,CV-24V-60W,Meanwell,60,NO,CV,NONE,240,180,20,2500,25,23,3,800
+8,CV-24V-TRIAC,Inventronics,40,YES,CV,TRIAC,240,180,20,1667,25,23,3,650
+9,IP67-CC-350MA-OUT,Meanwell,15,NO,CC,NONE,240,180,67,350,48,24,5,1200
+10,IP67-CC-700MA-OUT,Tridonic,30,NO,CC,NONE,240,180,67,700,48,32,5,1400

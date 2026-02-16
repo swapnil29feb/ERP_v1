@@ -1,0 +1,321 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Bill of Quantities | Lighting ERP{% endblock %}
+{% block header_title %}Bill of Quantities{% endblock %}
+
+{% block header_controls %}
+<div style="display: flex; gap: 8px;">
+    <button class="btn btn-secondary" onclick="BOQ.generate()">
+        <i class="fa-solid fa-rotate"></i> Regenerate
+    </button>
+    <button class="btn btn-secondary" onclick="BOQ.export('pdf')">
+        <i class="fa-solid fa-file-pdf" style="color:#ef4444;"></i> Export PDF
+    </button>
+    <!-- 
+    <button class="btn btn-secondary" onclick="BOQ.export('excel')">
+        <i class="fa-solid fa-file-excel" style="color:#10b981;"></i> Excel
+    </button>
+    -->
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Summary Cards -->
+    <div class="grid grid-4" style="margin-bottom: 2rem;">
+        <div class="stats-card" style="background: linear-gradient(135deg, var(--bg-card), hsla(220, 25%, 18%, 0.7));">
+            <div class="stats-icon"
+                style="background: linear-gradient(135deg, hsl(200, 90%, 56%), hsl(220, 90%, 56%));">
+                <i class="fa-solid fa-file-lines"></i>
+            </div>
+            <div class="stats-value" id="boq-status" style="font-size: 1.25rem;">DRAFT</div>
+            <div class="stats-label">BOQ Status</div>
+        </div>
+
+        <div class="stats-card" style="background: linear-gradient(135deg, var(--bg-card), hsla(220, 25%, 18%, 0.7));">
+            <div class="stats-icon"
+                style="background: linear-gradient(135deg, hsl(142, 76%, 45%), hsl(160, 76%, 50%));">
+                <i class="fa-solid fa-list-ol"></i>
+            </div>
+            <div class="stats-value" id="total-items">0</div>
+            <div class="stats-label">Total Items</div>
+        </div>
+
+        <div class="stats-card" style="background: linear-gradient(135deg, var(--bg-card), hsla(220, 25%, 18%, 0.7));">
+            <div class="stats-icon" style="background: linear-gradient(135deg, hsl(38, 92%, 50%), hsl(45, 92%, 55%));">
+                <i class="fa-solid fa-indian-rupee-sign"></i>
+            </div>
+            <div class="stats-value" id="total-base" style="font-family: monospace; font-size: 1.5rem;">₹ 0.00</div>
+            <div class="stats-label">Base Amount</div>
+        </div>
+
+        <div class="stats-card"
+            style="background: linear-gradient(135deg, var(--bg-card), hsla(280, 85%, 20%, 0.3)); border: 1px solid var(--accent);">
+            <div class="stats-icon" style="background: linear-gradient(135deg, var(--accent), var(--secondary));">
+                <i class="fa-solid fa-file-invoice-dollar"></i>
+            </div>
+            <div class="stats-value" id="total-final"
+                style="font-family: monospace; font-size: 1.75rem; color: var(--accent);">₹ 0.00</div>
+            <div class="stats-label">Final Amount</div>
+        </div>
+    </div>
+
+    <!-- BOQ Actions Bar -->
+    <div
+        style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; padding: 1rem; background: var(--bg-card); border: 1px solid var(--card-border); border-radius: var(--radius-md);">
+        
+        <!-- Left: Title & Info -->
+        <div>
+            <h4 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 0.25rem;">
+                <i class="fa-solid fa-table" style="color: var(--primary); margin-right: 0.5rem;"></i>
+                Bill of Quantities
+            </h4>
+            <p style="color: var(--text-muted); font-size: 0.85rem;">Detailed breakdown of all products and costs</p>
+        </div>
+
+        <!-- Center: Draft Controls (Margin) -->
+        <div id="draft-controls" style="display: none; align-items: center; gap: 1rem; background: rgba(255, 193, 7, 0.1); padding: 0.5rem 1rem; border-radius: var(--radius-md); border: 1px solid rgba(255, 193, 7, 0.3);">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <label style="color: var(--text-main); font-weight: 500; font-size: 0.9rem;">Global Margin:</label>
+                <div class="input-group" style="width: 120px;">
+                    <input type="number" id="global-margin-input" class="form-control" placeholder="0.00" step="0.01" min="0" style="height: 32px; font-size: 0.9rem;">
+                    <span class="input-group-text" style="height: 32px; padding: 0 0.5rem;">%</span>
+                </div>
+            </div>
+            <button class="btn btn-warning btn-sm" onclick="BOQ.applyMargin()">
+                <i class="fa-solid fa-percent"></i> Apply
+            </button>
+        </div>
+
+        <!-- Right: Actions -->
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+            
+            <!-- Draft Actions -->
+            <button id="btn-regenerate" class="btn btn-secondary" onclick="BOQ.generate()" style="display: none;">
+                <i class="fa-solid fa-rotate"></i> Regenerate
+            </button>
+            <button id="btn-approve" class="btn btn-success" onclick="BOQ.approve()" style="display: none;">
+                <i class="fa-solid fa-check-circle"></i> Approve BOQ
+            </button>
+
+            <!-- Common/Final Actions -->
+            <button id="btn-export-pdf" class="btn btn-danger" onclick="BOQ.export('pdf')">
+                <i class="fa-solid fa-file-pdf"></i> Export PDF
+            </button>
+            <button id="btn-export-excel" class="btn btn-success" onclick="BOQ.export('excel')" style="display: none;">
+                <i class="fa-solid fa-file-excel"></i> Export Excel
+            </button>
+        </div>
+    </div>
+
+    <!-- BOQ Tables -->
+    <div id="boq-tables">
+        <!-- JS Injects Groups Here -->
+        <div class="card" style="text-align: center; padding: 3rem;">
+            <i class="fa-solid fa-spinner fa-spin"
+                style="font-size: 2.5rem; color: var(--primary); margin-bottom: 1rem;"></i>
+            <p style="color: var(--text-secondary); font-size: 1.1rem;">Loading Bill of Quantities...</p>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem;">Please wait while we fetch the
+                data</p>
+        </div>
+    </div>
+
+    <!-- Price Edit Modal removed (Using Inline Editing) -->
+
+
+    <!-- Contextual Audit Logs -->
+    <div id="audit-log-container"></div>
+
+
+
+<style>
+    /* BOQ Table Styles */
+    .boq-table-container {
+        background: var(--bg-card);
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--card-border);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        margin-bottom: 2rem;
+        box-shadow: var(--shadow-md);
+        transition: all var(--transition-base);
+    }
+
+    .boq-table-container:hover {
+        box-shadow: var(--shadow-lg);
+        border-color: hsla(255, 255%, 255%, 0.15);
+    }
+
+    .boq-table-header {
+        background: linear-gradient(135deg, var(--primary), var(--accent));
+        padding: 1.25rem 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .boq-table-header h5 {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: white;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .boq-table-header .area-badge {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 0.25rem 0.75rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.75rem;
+        font-family: 'Courier New', monospace;
+    }
+
+    .boq-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .boq-table thead {
+        background: hsla(220, 25%, 18%, 0.8);
+    }
+
+    .boq-table thead th {
+        padding: 1rem;
+        text-align: left;
+        font-weight: 600;
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 2px solid var(--card-border);
+    }
+
+    .boq-table tbody tr {
+        border-bottom: 1px solid var(--card-border);
+        transition: background var(--transition-fast);
+    }
+
+    .boq-table tbody tr:hover {
+        background: var(--bg-hover);
+    }
+
+    .boq-table tbody td {
+        padding: 1rem;
+        color: var(--text-main);
+        font-size: 0.9rem;
+    }
+
+    .boq-table tbody td.numeric {
+        font-family: 'Courier New', monospace;
+        text-align: right;
+    }
+
+    .boq-table tfoot {
+        background: hsla(220, 25%, 18%, 0.9);
+        border-top: 2px solid var(--primary);
+    }
+
+    .boq-table tfoot td {
+        padding: 1.25rem 1rem;
+        font-weight: 700;
+        font-size: 1rem;
+        color: var(--primary-light);
+    }
+
+    .product-name {
+        font-weight: 600;
+        color: var(--text-main);
+    }
+
+    .product-code {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        font-family: 'Courier New', monospace;
+        background: var(--bg-hover);
+        padding: 0.125rem 0.5rem;
+        border-radius: var(--radius-sm);
+        display: inline-block;
+        margin-top: 0.25rem;
+    }
+
+    /* Editable Price Field Styles */
+    .price-cell-editable {
+        cursor: pointer;
+        position: relative;
+        transition: background var(--transition-fast);
+    }
+
+    .price-cell-editable:hover {
+        background: hsla(220, 25%, 25%, 0.8);
+        border-radius: var(--radius-sm);
+    }
+
+    .price-cell-editable::after {
+        content: "✎";
+        position: absolute;
+        right: 0.5rem;
+        top: 50%;
+        transform: translateY(-50%);
+        opacity: 0;
+        color: var(--primary);
+        font-size: 0.75rem;
+        transition: opacity var(--transition-fast);
+    }
+
+    .price-cell-editable:hover::after {
+        opacity: 1;
+    }
+
+    .price-cell-locked {
+        cursor: not-allowed;
+        color: var(--text-muted);
+        opacity: 0.7;
+        position: relative;
+        padding-right: 1.25rem;
+    }
+
+    .price-cell-locked::after {
+        content: "🔒";
+        position: absolute;
+        right: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 0.75rem;
+        opacity: 0.6;
+    }
+
+    .price-inline-input {
+        width: 100%;
+        padding: 0.5rem;
+        border: 2px solid var(--primary);
+        border-radius: var(--radius-sm);
+        background: var(--bg-hover);
+        color: var(--text-main);
+        font-family: monospace;
+        font-weight: 600;
+    }
+
+    .price-inline-input:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
+    }
+
+    .boq-item-row.locked {
+        opacity: 0.8;
+        background: hsla(220, 25%, 18%, 0.5);
+    }
+
+    .lock-icon {
+        display: inline-block;
+        margin-left: 0.5rem;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/boq.js' %}"></script>
+{% endblock %}

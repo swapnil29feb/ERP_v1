@@ -1,0 +1,801 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Masters Library | Lighting ERP{% endblock %}
+{% block header_title %}Masters Library{% endblock %}
+
+{% block header_controls %}
+<button class="btn btn-primary" id="btn-add-master">
+    <i class="fa-solid fa-plus"></i> <span id="add-btn-text">Add Product</span>
+</button>
+{% endblock %}
+
+{% block content %}
+<!-- Tabs -->
+    <div class="tabs-container" style="margin-bottom: 1rem;">
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="products" onclick="MastersPage.switchTab('products')">
+                <i class="fa-solid fa-lightbulb"></i>
+                Products
+                <span class="tab-count" id="products-count">0</span>
+            </button>
+            <button class="tab-btn" data-tab="drivers" onclick="MastersPage.switchTab('drivers')">
+                <i class="fa-solid fa-microchip"></i>
+                Drivers
+                <span class="tab-count" id="drivers-count">0</span>
+            </button>
+            <button class="tab-btn" data-tab="accessories" onclick="MastersPage.switchTab('accessories')">
+                <i class="fa-solid fa-toolbox"></i>
+                Accessories
+                <span class="tab-count" id="accessories-count">0</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div style="margin-bottom: 1rem;">
+        <div style="position: relative; max-width: 500px;">
+            <i class="fa-solid fa-search"
+                style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
+            <input type="text" id="master-search" placeholder="Search..."
+                style="width: 100%; padding: 0.625rem 0.875rem 0.625rem 2.5rem; background: var(--bg-card); border: 1px solid var(--card-border); border-radius: var(--radius-md); color: var(--text-main); font-size: 0.9rem;">
+        </div>
+    </div>
+
+    <!-- Tab Content -->
+    <div id="tab-content" style="display: flex; gap: 0; position: relative;">
+        <!-- Left Side: List View -->
+        <div id="master-list-section" style="flex: 1; min-width: 0; transition: margin-right 0.3s ease;">
+            <!-- Products Tab -->
+            <div class="tab-pane active" id="products-pane">
+                <div class="table-container">
+                    <table class="erp-table">
+                        <thead>
+                            <tr>
+                                <th>Make</th>
+                                <th>Order Code</th>
+                                <th>Mounting</th>
+                                <th>Wattage</th>
+                                <th>Driver Integration</th>
+                                <th>Type</th>
+                                <th style="text-align: right;">Base Price</th>
+                            </tr>
+                        </thead>
+                        <tbody id="products-list-body">
+                            <!-- Injected via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Drivers Tab -->
+            <div class="tab-pane" id="drivers-pane" style="display: none;">
+                <div class="table-container">
+                    <table class="erp-table">
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Make</th>
+                                <th>Type</th>
+                                <th>Max Wattage</th>
+                                <th>Dimming</th>
+                                <th style="text-align: right;">Base Price</th>
+                            </tr>
+                        </thead>
+                        <tbody id="drivers-list-body">
+                            <!-- Injected via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Accessories Tab -->
+            <div class="tab-pane" id="accessories-pane" style="display: none;">
+                <div class="table-container">
+                    <table class="erp-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Category</th>
+                                <th>Type</th>
+                                <th style="text-align: right;">Base Price</th>
+                            </tr>
+                        </thead>
+                        <tbody id="accessories-list-body">
+                            <!-- Injected via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Side: Detail Pane (truth on the right) -->
+        <aside id="master-detail-pane" class="side-detail-pane">
+            <div class="pane-header">
+                <h3><i class="fa-solid fa-circle-info"></i> Item Details</h3>
+                <button class="btn-icon" onclick="MastersPage.closeDetail()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="master-detail-content" class="pane-content">
+                <div class="empty-detail">
+                    <i class="fa-solid fa-mouse-pointer"></i>
+                    <p>Select an item to view details</p>
+                </div>
+            </div>
+            <div class="pane-footer" id="master-detail-footer" style="display: none;">
+                <span class="badge badge-outline"><i class="fa-solid fa-lock"></i> Global Record (Immutable)</span>
+            </div>
+        </aside>
+    </div>
+{% endblock %}
+
+{% block modals %}
+<!-- Product Modal -->
+<div class="modal-overlay" id="modal-product" style="display: none;">
+    <div class="modal" style="max-width: 850px; max-height: 90vh;">
+        <div class="modal-header">
+            <h3 class="modal-title">
+                <i class="fa-solid fa-lightbulb" style="color: var(--primary);"></i>
+                <span id="product-modal-title">Add Product</span>
+            </h3>
+            <button type="button" class="btn-icon" onclick="MastersPage.closeModal('modal-product')">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <form id="form-product">
+            <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
+                <div class="error-summary erp-error-banner" id="product-error-summary" style="display: none;"></div>
+                <input type="hidden" id="product-id">
+
+                <div class="grid grid-2" style="align-items: start; gap: 2rem;">
+                    <!-- Left Column: Technical & Identification -->
+                    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                        
+                        <!-- Identification Section -->
+                        <div class="form-section">
+                            <h4 class="section-title"><i class="fa-solid fa-fingerprint"></i> Identification</h4>
+                            <div class="grid grid-2">
+                                <div class="form-group">
+                                    <label>Make <span style="color: var(--error);">*</span></label>
+                                    <input type="text" id="product-make" class="form-control" required placeholder="e.g. Erco, Iguzzini">
+                                </div>
+                                <div class="form-group">
+                                    <label>Order Code</label>
+                                    <input type="text" id="product-order-code" class="form-control" placeholder="Unique SKU/Code">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Luminaire Color (RAL)</label>
+                                <input type="text" id="product-color-ral" class="form-control" placeholder="e.g. RAL 9005 (Black)">
+                            </div>
+                            <div class="form-group">
+                                <label>Characteristics</label>
+                                <textarea id="product-characteristics" class="form-control" rows="2" placeholder="Key characteristics..."></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Physical Dimensions Section -->
+                        <div class="form-section">
+                            <h4 class="section-title"><i class="fa-solid fa-ruler"></i> Mechanical Dimensions (mm)</h4>
+                            <div class="grid grid-3">
+                                <div class="form-group">
+                                    <label>Diameter</label>
+                                    <input type="number" id="product-diameter" class="form-control" placeholder="mm">
+                                </div>
+                                <div class="form-group">
+                                    <label>Length</label>
+                                    <input type="number" id="product-length" class="form-control" placeholder="mm">
+                                </div>
+                                <div class="form-group">
+                                    <label>Width</label>
+                                    <input type="number" id="product-width" class="form-control" placeholder="mm">
+                                </div>
+                            </div>
+                            <div class="grid grid-3">
+                                <div class="form-group">
+                                    <label>Height</label>
+                                    <input type="number" id="product-height" class="form-control" placeholder="mm">
+                                </div>
+                                <div class="form-group">
+                                    <label>Cutout Dia</label>
+                                    <input type="number" id="product-cutout" class="form-control" placeholder="mm">
+                                </div>
+                                <div class="form-group">
+                                    <label>Weight (kg)</label>
+                                    <input type="number" step="0.01" id="product-weight" class="form-control" placeholder="kg">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Mounting & Environment -->
+                        <div class="form-section">
+                            <h4 class="section-title"><i class="fa-solid fa-mountain"></i> Mounting & Environment</h4>
+                            <div class="grid grid-2">
+                                <div class="form-group">
+                                    <label>Mounting Style</label>
+                                    <select id="product-mounting" class="form-control">
+                                        <option value="SURFACE">Surface Mounted</option>
+                                        <option value="RECESSED">Recessed</option>
+                                        <option value="INGROUND">Inground Mounted</option>
+                                        <option value="TRACK MOUNTED">Track Mounted</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Environment</label>
+                                    <select id="product-environment" class="form-control">
+                                        <option value="INDOOR">Indoor</option>
+                                        <option value="OUTDOOR">Outdoor</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Optical & Electrical Section -->
+                        <div class="form-section">
+                            <h4 class="section-title"><i class="fa-solid fa-bolt"></i> Optical & Electrical</h4>
+                            <div class="grid grid-3">
+                                <div class="form-group">
+                                    <label>Beam Angle</label>
+                                    <input type="text" id="product-beam" class="form-control" placeholder="e.g. 24°">
+                                </div>
+                                <div class="form-group">
+                                    <label>IP Class</label>
+                                    <input type="number" id="product-ip" class="form-control" placeholder="20">
+                                </div>
+                                <div class="form-group">
+                                    <label>Wattage (W)</label>
+                                    <input type="number" step="0.01" id="product-wattage" class="form-control" placeholder="W">
+                                </div>
+                            </div>
+                            <div class="grid grid-3">
+                                <div class="form-group">
+                                    <label>Op. Voltage (V)</label>
+                                    <input type="number" id="product-voltage" class="form-control" placeholder="V">
+                                </div>
+                                <div class="form-group">
+                                    <label>Op. Current (mA)</label>
+                                    <input type="number" id="product-current" class="form-control" placeholder="mA">
+                                </div>
+                                <div class="form-group">
+                                    <label>Lumen Output</label>
+                                    <input type="number" id="product-lumen" class="form-control" placeholder="lm">
+                                </div>
+                            </div>
+                            <div class="grid grid-4">
+                                <div class="form-group">
+                                    <label>CCT (K)</label>
+                                    <input type="number" id="product-cct" class="form-control" placeholder="K">
+                                </div>
+                                <div class="form-group">
+                                    <label>CRI / CCI</label>
+                                    <input type="number" id="product-cri" class="form-control" placeholder="90">
+                                </div>
+                                <div class="form-group">
+                                    <label>Efficiency</label>
+                                    <input type="number" step="0.01" id="product-efficiency" class="form-control" placeholder="lm/W">
+                                </div>
+                                <div class="form-group">
+                                    <label>Electrical Type</label>
+                                    <select id="product-electrical-type" class="form-control">
+                                        <option value="CC">Constant Current (CC)</option>
+                                        <option value="CV">Constant Voltage (CV)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Control, Commercial & Media -->
+                    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                        
+                        <!-- Control & Driver Section -->
+                        <div class="form-section" style="background: var(--bg-hover); padding: 1rem; border-radius: var(--radius-md);">
+                            <h4 class="section-title"><i class="fa-solid fa-sliders"></i> Control & Driver</h4>
+                            <div class="form-group">
+                                <label>Driver Integration</label>
+                                <select id="product-driver-integration" class="form-control">
+                                    <option value="EXTERNAL">External Driver</option>
+                                    <option value="INTEGRATED">Integrated Driver</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Control Ready</label>
+                                <select id="product-control-ready" class="form-control">
+                                    <option value="NONE">None</option>
+                                    <option value="DALI">DALI</option>
+                                    <option value="0-10V">0-10V</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Commercial Section -->
+                        <div class="form-section" style="background: var(--bg-hover); padding: 1rem; border-radius: var(--radius-md);">
+                            <h4 class="section-title"><i class="fa-solid fa-coins"></i> Commercial</h4>
+                            <div class="form-group">
+                                <label>Base Price (₹) <span style="color: var(--error);">*</span></label>
+                                <input type="number" step="0.01" id="product-price" class="form-control" required placeholder="0.00">
+                            </div>
+                            <div class="form-group">
+                                <label>Warranty (Years)</label>
+                                <input type="number" id="product-warranty" class="form-control" placeholder="Years">
+                            </div>
+                            <div class="form-group">
+                                <label>Website Link</label>
+                                <input type="url" id="product-website" class="form-control" placeholder="https://...">
+                            </div>
+                        </div>
+
+                        <!-- Media Section -->
+                        <div class="form-section" style="background: var(--bg-hover); padding: 1rem; border-radius: var(--radius-md);">
+                            <h4 class="section-title"><i class="fa-solid fa-photo-film"></i> Product Visuals</h4>
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                                <div class="form-group">
+                                    <label style="font-size: 0.75rem;">Illustrative</label>
+                                    <div id="illustrative-preview" class="media-preview">
+                                        <i class="fa-solid fa-image"></i>
+                                    </div>
+                                    <input type="file" id="product-illustrative-image" class="form-control file-input">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label style="font-size: 0.75rem;">Visual (Primary)</label>
+                                    <div id="visual-preview" class="media-preview">
+                                        <i class="fa-solid fa-camera"></i>
+                                    </div>
+                                    <input type="file" id="product-visual-image" class="form-control file-input">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label style="font-size: 0.75rem;">Photometrics</label>
+                                <div id="photometrics-preview" class="media-preview" style="height: 80px;">
+                                    <i class="fa-solid fa-chart-area"></i>
+                                </div>
+                                <input type="file" id="product-photometrics-image" class="form-control file-input">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="MastersPage.closeModal('modal-product')">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-product-btn">Save Product</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Driver Modal -->
+<div class="modal-overlay" id="modal-driver" style="display: none;">
+    <div class="modal" style="max-width: 700px; max-height: 90vh;">
+        <div class="modal-header">
+            <h3 class="modal-title">
+                <i class="fa-solid fa-microchip" style="color: var(--primary);"></i>
+                <span id="driver-modal-title">Add Driver</span>
+            </h3>
+            <button type="button" class="btn-icon" onclick="MastersPage.closeModal('modal-driver')">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <form id="form-driver">
+            <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
+                <div class="error-summary erp-error-banner" id="driver-error-summary" style="display: none;"></div>
+                <input type="hidden" id="driver-id">
+
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label>Driver Code <span style="color: var(--error);">*</span></label>
+                        <input type="text" id="driver-code" class="form-control" required placeholder="SKU/Code">
+                    </div>
+                    <div class="form-group">
+                        <label>Driver Make <span style="color: var(--error);">*</span></label>
+                        <input type="text" id="driver-make" class="form-control" required placeholder="e.g. Osram, Philips">
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h4 class="section-title"><i class="fa-solid fa-bolt"></i> Electrical Input</h4>
+                    <div class="grid grid-3">
+                        <div class="form-group">
+                            <label>Voltage Min (V)</label>
+                            <input type="number" id="driver-volt-min" class="form-control" placeholder="Min">
+                        </div>
+                        <div class="form-group">
+                            <label>Voltage Max (V)</label>
+                            <input type="number" id="driver-volt-max" class="form-control" placeholder="Max">
+                        </div>
+                        <div class="form-group">
+                            <label>Max Wattage (W)</label>
+                            <input type="number" id="driver-wattage" class="form-control" placeholder="W">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h4 class="section-title"><i class="fa-solid fa-plug"></i> Electrical Output</h4>
+                    <div class="grid grid-3">
+                        <div class="form-group">
+                            <label>Current (mA)</label>
+                            <input type="number" id="driver-current" class="form-control" placeholder="mA">
+                        </div>
+                        <div class="form-group">
+                            <label>Volt Out Min</label>
+                            <input type="number" id="driver-out-volt-min" class="form-control" placeholder="Min">
+                        </div>
+                        <div class="form-group">
+                            <label>Volt Out Max</label>
+                            <input type="number" id="driver-out-volt-max" class="form-control" placeholder="Max">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Constant Type</label>
+                        <select id="driver-constant-type" class="form-control">
+                            <option value="CC">Constant Current (CC)</option>
+                            <option value="CV">Constant Voltage (CV)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h4 class="section-title"><i class="fa-solid fa-sliders"></i> Control</h4>
+                    <div class="grid grid-2">
+                        <div class="form-group">
+                            <label>Dimmable</label>
+                            <select id="driver-dimmable" class="form-control">
+                                <option value="YES">Yes</option>
+                                <option value="NO">No</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Dimming Protocol</label>
+                            <select id="driver-dimming-protocol" class="form-control">
+                                <option value="NONE">None</option>
+                                <option value="DALI">DALI</option>
+                                <option value="0-10V">0-10V</option>
+                                <option value="1-10V">1-10V</option>
+                                <option value="TRIAC">TRIAC</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h4 class="section-title"><i class="fa-solid fa-shield-halved"></i> Protection & Commercial</h4>
+                    <div class="grid grid-3">
+                        <div class="form-group">
+                            <label>IP Class</label>
+                            <input type="number" id="driver-ip" class="form-control" placeholder="20">
+                        </div>
+                        <div class="form-group">
+                            <label>Warranty (Yrs)</label>
+                            <input type="number" id="driver-warranty" class="form-control" placeholder="Years">
+                        </div>
+                        <div class="form-group">
+                            <label>Base Price (₹) <span style="color: var(--error);">*</span></label>
+                            <input type="number" step="0.01" id="driver-price" class="form-control" required placeholder="0.00">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="MastersPage.closeModal('modal-driver')">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-driver-btn">Save Driver</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Accessory Modal -->
+<div class="modal-overlay" id="modal-accessory" style="display: none;">
+    <div class="modal" style="max-width: 700px; max-height: 90vh;">
+        <div class="modal-header">
+            <h3 class="modal-title">
+                <i class="fa-solid fa-toolbox" style="color: var(--primary);"></i>
+                <span id="accessory-modal-title">Add Accessory</span>
+            </h3>
+            <button type="button" class="btn-icon" onclick="MastersPage.closeModal('modal-accessory')">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <form id="form-accessory">
+            <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
+                <div class="error-summary erp-error-banner" id="accessory-error-summary" style="display: none;"></div>
+                <input type="hidden" id="accessory-id">
+
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label>Accessory Name <span style="color: var(--error);">*</span></label>
+                        <input type="text" id="accessory-name" class="form-control" required placeholder="e.g. Honeycomb Louver">
+                    </div>
+                    <div class="form-group">
+                        <label>Accessory Type <span style="color: var(--error);">*</span></label>
+                        <input type="text" id="accessory-type" class="form-control" required placeholder="e.g. Optical">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="accessory-description" class="form-control" rows="2" placeholder="Details..."></textarea>
+                </div>
+
+                <div class="form-section">
+                    <h4 class="section-title"><i class="fa-solid fa-link"></i> Compatibility</h4>
+                    <div class="form-group">
+                        <label>Mounting Styles (Multi-select)</label>
+                        <select id="accessory-mounting" class="form-control" multiple style="height: 100px;">
+                            <option value="SURFACE">Surface Mounted</option>
+                            <option value="RECESSED">Recessed</option>
+                            <option value="INGROUND">Inground Mounted</option>
+                            <option value="TRACK MOUNTED">Track Mounted</option>
+                        </select>
+                        <small style="color: var(--text-muted);">Hold Ctrl/Cmd to select multiple</small>
+                    </div>
+                    <div class="grid grid-3">
+                        <div class="form-group">
+                            <label>Min Dia (mm)</label>
+                            <input type="number" id="accessory-min-dia" class="form-control" placeholder="Min">
+                        </div>
+                        <div class="form-group">
+                            <label>Max Dia (mm)</label>
+                            <input type="number" id="accessory-max-dia" class="form-control" placeholder="Max">
+                        </div>
+                        <div class="form-group">
+                            <label>IP Class</label>
+                            <input type="number" id="accessory-ip" class="form-control" placeholder="IP">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select id="accessory-category" class="form-control">
+                            <option value="MOUNTING">Mounting</option>
+                            <option value="OPTICAL">Optical</option>
+                            <option value="DECORATIVE">Decorative</option>
+                            <option value="INSTALLATION">Installation</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Base Price (₹) <span style="color: var(--error);">*</span></label>
+                        <input type="number" step="0.01" id="accessory-price" class="form-control" required placeholder="0.00">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="MastersPage.closeModal('modal-accessory')">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-accessory-btn">Save Accessory</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    /* Tabs */
+    .tabs {
+        display: flex;
+        gap: 0.5rem;
+        border-bottom: 2px solid var(--card-border);
+    }
+
+    .tab-btn {
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        padding: 1rem 1.5rem;
+        font-size: 0.95rem;
+        font-weight: 600;
+        cursor: pointer;
+        border-bottom: 3px solid transparent;
+        transition: all var(--transition-base);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        position: relative;
+    }
+
+    .tab-btn:hover {
+        color: var(--text-main);
+        background: var(--bg-hover);
+    }
+
+    .tab-btn.active {
+        color: var(--primary-light);
+        border-bottom-color: var(--primary);
+    }
+
+    .tab-count {
+        background: var(--bg-hover);
+        padding: 0.125rem 0.5rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
+
+    .tab-btn.active .tab-count {
+        background: var(--primary-glow);
+        color: var(--primary-light);
+    }
+
+    /* ERP Table Look */
+    .erp-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--bg-card);
+        border: 1px solid var(--card-border);
+    }
+
+    .erp-table th {
+        text-align: left;
+        padding: 0.75rem;
+        background: hsla(220, 25%, 15%, 0.8);
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--text-muted);
+        border-bottom: 2px solid var(--card-border);
+    }
+
+    .erp-table td {
+        padding: 0.625rem 0.75rem;
+        border-bottom: 1px solid var(--card-border);
+        font-size: 0.9rem;
+        color: var(--text-main);
+        cursor: pointer;
+    }
+
+    .erp-table tr:hover td {
+        background: var(--bg-hover);
+        color: var(--primary-light);
+    }
+
+    .erp-table tr.selected td {
+        background: var(--primary-glow);
+        border-left: 3px solid var(--primary);
+    }
+
+    /* Side Detail Pane */
+    .side-detail-pane {
+        width: 0;
+        min-height: calc(100vh - 200px);
+        background: var(--bg-card);
+        border-left: 0 solid var(--card-border);
+        overflow: hidden;
+        transition: all 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        position: sticky;
+        top: 20px;
+        z-index: 10;
+    }
+
+    .side-detail-pane.open {
+        width: 450px;
+        border-left-width: 1px;
+        margin-left: 1.5rem;
+    }
+
+    .pane-header {
+        padding: 1.25rem;
+        border-bottom: 1px solid var(--card-border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: hsla(220, 25%, 12%, 0.5);
+    }
+
+    .pane-header h3 {
+        margin: 0;
+        font-size: 1.1rem;
+        color: var(--text-main);
+    }
+
+    .pane-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1.5rem;
+    }
+
+    .pane-footer {
+        padding: 1.25rem;
+        border-top: 1px solid var(--card-border);
+        display: flex;
+        gap: 0.75rem;
+        background: hsla(220, 25%, 12%, 0.5);
+    }
+
+    .empty-detail {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: var(--text-muted);
+        opacity: 0.5;
+    }
+
+    .empty-detail i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+
+    /* Detail Field Styles */
+    .detail-section { margin-bottom: 2rem; }
+    .detail-section-title {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--primary-light);
+        margin-bottom: 1rem;
+        border-bottom: 1px solid var(--card-border);
+        padding-bottom: 0.5rem;
+    }
+    .detail-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+    .detail-item {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.85rem;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid hsla(220, 25%, 18%, 0.3);
+    }
+    .detail-label { color: var(--text-muted); }
+    .detail-value { color: var(--text-main); font-weight: 500; text-align: right; }
+
+    .detail-image-box {
+        width: 100%;
+        height: 150px;
+        background: #000;
+        border-radius: var(--radius-sm);
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+    .detail-image-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .detail-image-box i { font-size: 2rem; opacity: 0.1; }
+
+    /* Badges & UI Elements */
+    .badge {
+        display: inline-block;
+        padding: 0.25rem 0.625rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.75rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .badge-sm { padding: 0.125rem 0.375rem; font-size: 0.7rem; }
+    .badge-success { background: var(--success-bg); color: var(--success); }
+    .badge-secondary { background: var(--bg-hover); color: var(--text-secondary); }
+    .badge-outline { border: 1px solid var(--card-border); color: var(--text-secondary); }
+    .product-code-badge {
+        font-family: 'JetBrains Mono', 'Fira Code', monospace;
+        background: hsla(220, 90%, 56%, 0.1);
+        color: var(--primary-light);
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        border: 1px solid hsla(220, 90%, 56%, 0.2);
+    }
+
+    .erp-error-banner {
+        background: rgba(255, 71, 87, 0.1);
+        border: 1px solid var(--error);
+        color: var(--error);
+        padding: 0.75rem;
+        border-radius: var(--radius-sm);
+        margin-bottom: 1.5rem;
+        font-size: 0.85rem;
+        line-height: 1.4;
+    }
+    .erp-error-banner ul { margin: 0.5rem 0 0 1.25rem; padding: 0; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/masters.js' %}"></script>
+{% endblock %}
