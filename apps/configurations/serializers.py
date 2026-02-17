@@ -79,7 +79,7 @@ class LightingConfigurationSerializer(serializers.ModelSerializer):
             "id",
             "project",
             "area",
-            "subarea",          # ✅ REQUIRED
+            "subarea",
             "product",
             "product_detail",
             "quantity",
@@ -88,11 +88,12 @@ class LightingConfigurationSerializer(serializers.ModelSerializer):
             "configuration_version",
             "is_active",
         ]
-        read_only_fields = (
-            "project",
-            "configuration_version",
-            "is_active",
-        )
+        read_only_fields = ["project", "configuration_version", "is_active", "area", "subarea"]
+
+    def update(self, instance, validated_data):
+        instance.quantity = validated_data.get("quantity", instance.quantity)
+        instance.save()
+        return instance
 
     def create(self, validated_data):
         """

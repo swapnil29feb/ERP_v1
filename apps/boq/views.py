@@ -89,7 +89,18 @@ class BOQSummaryAPI(APIView):
         project = get_object_or_404(Project, id=project_id)
         summary = get_project_boq_summary(project)
         if summary is None:
-            return Response({})
+            return Response({"detail": "No BOQ found for project."}, status=status.HTTP_404_NOT_FOUND)
+        boq = BOQ.objects.filter(project=project).order_by("-version").first()
+        subtotal = sum([v["amount"] for v in summary["summary"].values()])
+        margin_percent = getattr(boq, "margin_percent", 0)
+        margin_amount = subtotal * (margin_percent / 100)
+        grand_total = subtotal + margin_amount
+        summary.update({
+            "subtotal": subtotal,
+            "margin_percent": margin_percent,
+            "margin_amount": margin_amount,
+            "grand_total": grand_total
+        })
         return Response(summary)
 
 
@@ -101,6 +112,16 @@ class BOQSummaryDetailAPI(APIView):
     def get(self, request, boq_id):
         boq = get_object_or_404(BOQ, id=boq_id)
         summary = get_boq_summary(boq)
+        subtotal = sum([v["amount"] for v in summary["summary"].values()])
+        margin_percent = getattr(boq, "margin_percent", 0)
+        margin_amount = subtotal * (margin_percent / 100)
+        grand_total = subtotal + margin_amount
+        summary.update({
+            "subtotal": subtotal,
+            "margin_percent": margin_percent,
+            "margin_amount": margin_amount,
+            "grand_total": grand_total
+        })
         return Response(summary)
 
 
@@ -135,30 +156,20 @@ class BOQApproveAPI(APIView):
         from apps.rbac.permissions import has_permission
         if not has_permission(request.user, 'boq', 'approve'):
             return Response({'detail': 'Forbidden'}, status=status.HTTP_403_FORBIDDEN)
-
         boq = get_object_or_404(BOQ, id=boq_id)
-
         if boq.status == 'FINAL':
-            return Response(
-                {'detail': 'BOQ already Approved'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
+            return Response({'detail': 'BOQ already Approved'}, status=status.HTTP_400_BAD_REQUEST)
         boq.status = "FINAL"
-        boq.locked_at = timezone.now()
+        boq.approved_at = timezone.now()
         boq.save()
-
         from apps.boq.models import AuditLogEntry
         AuditLogEntry.objects.create(
             user=request.user,
             action="BOQ_APPROVED",
+            reference_id=boq.id,
             details={"boq_id": boq.id, "version": boq.version}
         )
-
-        return Response(
-            {'detail': f"BOQ v{boq.version} approved"},
-            status=status.HTTP_200_OK
-        )
+        return Response({'detail': f"BOQ v{boq.version} approved"}, status=status.HTTP_200_OK)
 
 
 class BOQExportPDFAPI(APIView):
@@ -264,88 +275,49 @@ class BOQItemPriceUpdateAPI(APIView):
     def patch(self, request, boq_item_id):
         try:
             boq_item = get_object_or_404(BOQItem, id=boq_item_id)
-            boq = boq_item.boq
-            
-            # ✅ ERP HARD RULE: No edits after approval
-            if boq.status != "DRAFT":
-                return Response(
-                    {
-                        "detail": "Cannot modify BOQ item prices in a FINAL BOQ",
-                        "boq_status": boq.status
-                    },
-                    status=status.HTTP_403_FORBIDDEN
+            def patch(self, request, boq_item_id):
+                boq_item = get_object_or_404(BOQItem, id=boq_item_id)
+                boq = boq_item.boq
+                if boq.status != "DRAFT":
+                    return Response({"error": "Approved BOQ cannot be modified"}, status=400)
+                from apps.boq.serializers import BOQItemPriceUpdateSerializer
+                serializer = BOQItemPriceUpdateSerializer(data=request.data)
+                if not serializer.is_valid():
+                    return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+                new_unit_price = serializer.validated_data['unit_price']
+                old_unit_price = boq_item.unit_price
+                boq_item.unit_price = new_unit_price
+                boq_item.final_price = (boq_item.unit_price * boq_item.quantity * (1 + boq_item.markup_pct / 100))
+                boq_item.save()
+                item_ref = self._get_item_reference(boq_item)
+                from apps.boq.models import AuditLogEntry
+                AuditLogEntry.objects.create(
+                    user=request.user,
+                    action="PRICE UPDATE",
+                    details={
+                        "boq_id": boq.id,
+                        "version": boq.version,
+                        "boq_item_id": boq_item.id,
+                        "item_reference": item_ref,
+                        "old_unit_price": float(old_unit_price),
+                        "new_unit_price": float(new_unit_price),
+                        "area_name": boq_item.area.name if boq_item.area else "Unknown",
+                        "quantity": boq_item.quantity,
+                        "old_final_price": float(old_unit_price * boq_item.quantity * (1 + boq_item.markup_pct / 100)),
+                        "new_final_price": float(boq_item.final_price)
+                    }
                 )
-            
-            # Validate input
-            from apps.boq.serializers import BOQItemPriceUpdateSerializer
-            serializer = BOQItemPriceUpdateSerializer(data=request.data)
-            
-            if not serializer.is_valid():
-                return Response(
-                    {"errors": serializer.errors},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            # Get the new unit price
-            new_unit_price = serializer.validated_data['unit_price']
-            old_unit_price = boq_item.unit_price
-            
-            # Update BOQItem unit_price (transactional override)
-            boq_item.unit_price = new_unit_price
-            
-            # Recalculate final_price = (unit_price * quantity * (1 + markup_pct / 100))
-            boq_item.final_price = (
-                boq_item.unit_price * boq_item.quantity * 
-                (1 + boq_item.markup_pct / 100)
-            )
-            boq_item.save()
-            
-            # Get item reference for audit logging
-            item_ref = self._get_item_reference(boq_item)
-            
-            # 🔐 AUDIT LOGGING: Record price override
-            from apps.boq.models import AuditLogEntry
-            AuditLogEntry.objects.create(
-                user=request.user,
-                action="PRICE UPDATE",
-                details={
-                    "boq_id": boq.id,
-                    "version": boq.version,
-                    "boq_item_id": boq_item.id,
-                    "item_reference": item_ref,
-                    "old_unit_price": float(old_unit_price),
-                    "new_unit_price": float(new_unit_price),
-                    "area_name": boq_item.area.name if boq_item.area else "Unknown",
-                    "quantity": boq_item.quantity,
-                    "old_final_price": float(
-                        old_unit_price * boq_item.quantity * 
-                        (1 + boq_item.markup_pct / 100)
-                    ),
-                    "new_final_price": float(boq_item.final_price)
-                }
-            )
-            
-            return Response(
-                {
+                return Response({
                     "detail": "BOQ item price updated successfully",
                     "boq_item_id": boq_item.id,
                     "unit_price": float(boq_item.unit_price),
                     "final_price": float(boq_item.final_price),
                     "item_reference": item_ref
-                },
-                status=status.HTTP_200_OK
-            )
-        
-        except BOQItem.DoesNotExist:
-            return Response(
-                {"detail": "BOQ item not found"},
-                status=status.HTTP_404_NOT_FOUND
-            )
+                }, status=status.HTTP_200_OK)
         except Exception as e:
-            # Fail securely without exposing internals
             return Response(
-                {"detail": "Failed to update BOQ item price"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": str(e)},
+                status=400
             )
 
     def _get_item_reference(self, boq_item):

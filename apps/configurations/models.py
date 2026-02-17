@@ -11,16 +11,30 @@ from apps.masters.models.accessory import Accessory
 
 # Create your models here.
 class LightingConfiguration(models.Model):
-    """
-    ERP-grade Configuration Model with Versioning.
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        # PROJECT LEVEL MODE
+        if self.project.inquiry_type == "PROJECT_LEVEL":
+            if self.area or self.subarea:
+                raise ValidationError(
+                    "Area/SubArea must be empty for PROJECT_LEVEL projects."
+                )
+
+        # AREA WISE MODE
+        if self.project.inquiry_type == "AREA_WISE":
+            if self.subarea and not self.area:
+                raise ValidationError(
+                    "SubArea cannot exist without Area."
+                )
+            if self.subarea and self.subarea.area != self.area:
+                raise ValidationError(
+                    "SubArea must belong to the selected Area."
+                )
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
     
-    Versioning Rules:
-    - configuration_version auto-increments per (project, area)
-    - Each version is immutable (never updated after creation)
-    - is_active marks the current working version
-    - (project, area, configuration_version) is unique
-    - Deletion is PROHIBITED for audit compliance
-    """
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     area = models.ForeignKey(
     Area,
@@ -56,6 +70,8 @@ class LightingConfiguration(models.Model):
             models.Index(fields=['project', 'area', 'is_active']),
             models.Index(fields=['project', 'area', 'configuration_version']),
         ]
+        # Database-level constraints removed: cannot reference joined fields like project__inquiry_type.
+        # Business rule is enforced at the model level in clean().
     
     def __str__(self):
         area_name = self.area.name if self.area else "Project-Level"

@@ -20,20 +20,29 @@ from django_filters.rest_framework import DjangoFilterBackend
 
 
 class LightingConfigurationListAPI(ModelViewSet):
-    queryset = LightingConfiguration.objects.filter(is_active=True)
+    queryset = LightingConfiguration.objects.all()
+    serializer_class = LightingConfigurationSerializer
+
+    def get_queryset(self):
+        project_id = self.request.query_params.get("project_id")
+        print("PROJECT ID PARAM", project_id)
+        qs = LightingConfiguration.objects.filter(is_active=True)
+        if project_id:
+            qs = qs.filter(project_id=project_id)
+        return qs.select_related("product", "area", "subarea")
     serializer_class = LightingConfigurationSerializer
     permission_classes = [IsEditorOrReadOnly]
     filter_backends = [SearchFilter, DjangoFilterBackend]
 
     @action(detail=False, methods=["get"], url_path="by-area/(?P<area_id>[^/.]+)")
     def by_area(self, request, area_id=None):
-        configs = self.queryset.filter(area_id=area_id, is_active=True)
+        configs = self.get_queryset().filter(area_id=area_id)
         serializer = self.get_serializer(configs, many=True)
         return Response(serializer.data)
 
     @action(detail=False, methods=["get"], url_path="by-subarea/(?P<subarea_id>[^/.]+)")
     def by_subarea(self, request, subarea_id=None):
-        configs = self.queryset.filter(subarea_id=subarea_id, is_active=True)
+        configs = self.get_queryset().filter(subarea_id=subarea_id)
         serializer = self.get_serializer(configs, many=True)
         return Response(serializer.data)
 
@@ -47,9 +56,9 @@ class LightingConfigurationListAPI(ModelViewSet):
         Returns active configuration for project-level BOQ.
         Used when project.inquiry_type = PROJECT_LEVEL
         """
-        configs = self.queryset.filter(
-            project_id=project_id,
-            is_active=True
+        print("BY PROJECT HIT", project_id)
+        configs = self.get_queryset().filter(
+            project_id=project_id
         )
         serializer = self.get_serializer(configs, many=True)
         return Response(serializer.data)
@@ -68,19 +77,10 @@ class LightingConfigurationListAPI(ModelViewSet):
         serializer.save()
 
     def destroy(self, request, *args, **kwargs):
-        """
-        ERP RULE: Prevent deletion of configuration versions.
-        Configuration versions must NEVER be deleted (audit compliance).
-        Only deactivate by creating new versions instead.
-        """
-        return Response(
-            {
-                "detail": "Configuration versions cannot be deleted (ERP audit compliance). "
-                "Create a new version instead via save_batch.",
-                "status": "forbidden"
-            },
-            status=status.HTTP_403_FORBIDDEN
-        )
+        instance = self.get_object()
+        instance.is_active = False
+        instance.save()
+        return Response(status=204)
     
     @action(detail=False, methods=["post"], url_path="save_batch")
     def save_batch(self, request):

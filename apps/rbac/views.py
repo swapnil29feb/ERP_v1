@@ -4,11 +4,13 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from .serializers import UserSerializer, RoleSerializer, PermissionSerializer
+from rest_framework.filters import SearchFilter
+from django_filters.rest_framework import DjangoFilterBackend
 
 class UserViewSet(viewsets.ModelViewSet):
 	queryset = User.objects.all()
 	serializer_class = UserSerializer
-	filter_backends = []  # Fix: must be iterable, not a type
+	filter_backends = [SearchFilter, DjangoFilterBackend]
 
 	@action(detail=True, methods=['post'], url_path='assign-role')
 	def assign_role(self, request, pk=None):
@@ -24,6 +26,7 @@ class UserViewSet(viewsets.ModelViewSet):
 class RoleViewSet(viewsets.ModelViewSet):
 	queryset = Group.objects.all()
 	serializer_class = RoleSerializer
+	filter_backends = [SearchFilter, DjangoFilterBackend]
 
 	@action(detail=True, methods=['post'], url_path='assign-permissions')
 	def assign_permissions(self, request, pk=None):
@@ -57,3 +60,4 @@ class RoleViewSet(viewsets.ModelViewSet):
 class PermissionViewSet(viewsets.ReadOnlyModelViewSet):
 	queryset = Permission.objects.all()
 	serializer_class = PermissionSerializer
+	filter_backends = [SearchFilter, DjangoFilterBackend]
