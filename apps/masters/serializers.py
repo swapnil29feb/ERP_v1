@@ -80,7 +80,8 @@ class AccessorySummarySerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "accessory_name",
-            "accessory_type"
+            "accessory_type",
+                "base_price" 
         ]
 
 

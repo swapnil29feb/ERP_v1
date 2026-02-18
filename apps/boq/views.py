@@ -103,26 +103,62 @@ class BOQSummaryAPI(APIView):
         })
         return Response(summary)
 
-
 class BOQSummaryDetailAPI(APIView):
     """
-    Specific BOQ summary by ID
+    Specific BOQ summary by ID (CUMULATIVE)
     """
-    filter_backends = [SearchFilter, DjangoFilterBackend]
+
     def get(self, request, boq_id):
         boq = get_object_or_404(BOQ, id=boq_id)
-        summary = get_boq_summary(boq)
-        subtotal = sum([v["amount"] for v in summary["summary"].values()])
+
+        # 🔥 cumulative BOQ items
+        items = BOQItem.objects.filter(
+            boq__project=boq.project,
+            boq__version__lte=boq.version
+        ).select_related(
+            "product",
+            "driver",
+            "accessory",
+            "area"
+        ).order_by("boq__version", "id")
+
+        # serialize items
+        items_data = BOQItemSerializer(items, many=True).data
+
+        # -------- summary calculation ----------
+        summary_map = {}
+        for item in items:
+            key = item.item_type
+
+            if key not in summary_map:
+                summary_map[key] = {"quantity": 0, "amount": 0}
+
+            summary_map[key]["quantity"] += item.quantity
+            summary_map[key]["amount"] += float(item.final_price or 0)
+
+        subtotal = sum(v["amount"] for v in summary_map.values())
         margin_percent = getattr(boq, "margin_percent", 0)
         margin_amount = subtotal * (margin_percent / 100)
         grand_total = subtotal + margin_amount
-        summary.update({
+
+        return Response({
+            "project_id": boq.project.id,
+            "boq_id": boq.id,
+            "version": boq.version,
+            "status": boq.status,
+            "created_at": boq.created_at,
+            "source_configuration_version": boq.source_configuration_version,
+
+            # cumulative totals
+            "summary": summary_map,
             "subtotal": subtotal,
             "margin_percent": margin_percent,
             "margin_amount": margin_amount,
-            "grand_total": grand_total
+            "grand_total": grand_total,
+
+            # 🔥 NEW FIELD
+            "items": items_data
         })
-        return Response(summary)
 
 
 class BOQVersionsListAPI(APIView):

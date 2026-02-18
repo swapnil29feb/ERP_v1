@@ -39,7 +39,8 @@ class ConfigurationAccessoryNestedSerializer(serializers.ModelSerializer):
             "id",
             "accessory",
             "accessory_detail",
-            "quantity"
+            "quantity",
+         
         ]
 
 
