@@ -49,13 +49,13 @@ class LightingConfigurationSerializer(serializers.ModelSerializer):
         read_only=True
     )
 
-    driver = ConfigurationDriverNestedSerializer(
-        source="configuration_driver",
+    drivers = ConfigurationDriverNestedSerializer(
+        source="configuration_drivers",
+        many=True,
         read_only=True
     )
 
     accessories = ConfigurationAccessoryNestedSerializer(
-        source="configurationaccessory_set",
         many=True,
         read_only=True
     )
@@ -83,7 +83,7 @@ class LightingConfigurationSerializer(serializers.ModelSerializer):
             "product",
             "product_detail",
             "quantity",
-            "driver",
+            "drivers",
             "accessories",
             "configuration_version",
             "is_active",
