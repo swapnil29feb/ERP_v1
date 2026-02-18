@@ -312,28 +312,37 @@ def generate_boq(project, user):
         "source_configuration_version": config_version,
     }
 
+
 def get_boq_summary(boq):
     if not boq:
         return None
-    items = BOQItem.objects.filter(boq=boq).values("item_type").annotate(
-        total_qty=Sum("quantity"), 
+
+    # 🔥 cumulative items
+    items = BOQItem.objects.filter(
+        boq__project=boq.project,
+        boq__version__lte=boq.version
+    ).values("item_type").annotate(
+        total_qty=Sum("quantity"),
         total_value=Sum("final_price")
     )
+
     summary = {}
     for item in items:
         summary[item["item_type"]] = {
-            "quantity": item["total_qty"], 
+            "quantity": item["total_qty"],
             "amount": float(item["total_value"] or 0)
         }
+
     return {
-        "project_id": boq.project.id, 
-        "boq_id": boq.id, 
-        "version": boq.version, 
-        "status": boq.status, 
+        "project_id": boq.project.id,
+        "boq_id": boq.id,
+        "version": boq.version,
+        "status": boq.status,
         "summary": summary,
         "created_at": boq.created_at,
         "source_configuration_version": boq.source_configuration_version
     }
+
 
 def get_project_boq_summary(project):
     boq = BOQ.objects.filter(project=project).order_by("-version").first()

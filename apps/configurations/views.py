@@ -25,11 +25,26 @@ class LightingConfigurationListAPI(ModelViewSet):
 
     def get_queryset(self):
         project_id = self.request.query_params.get("project_id")
-        print("PROJECT ID PARAM", project_id)
-        qs = LightingConfiguration.objects.filter(is_active=True)
+        show_all = self.request.query_params.get("show_all")
+
+        qs = LightingConfiguration.objects.all()
+
         if project_id:
             qs = qs.filter(project_id=project_id)
-        return qs.select_related("product", "area", "subarea")
+        print(show_all)
+        # default → onlynon active
+        # if show_all != "None":
+        #     qs = qs.filter(is_active=True)
+
+        return qs.select_related(
+            "product",
+            "area",
+            "subarea"
+        ).prefetch_related(
+            "configuration_drivers__driver",
+            "accessories__accessory"
+        ).order_by("configuration_version")
+
     serializer_class = LightingConfigurationSerializer
     permission_classes = [IsEditorOrReadOnly]
     filter_backends = [SearchFilter, DjangoFilterBackend]
@@ -315,4 +330,3 @@ class ConfigurationDriverViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=200)
 
         return super().create(request, *args, **kwargs)
-

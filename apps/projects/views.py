@@ -97,4 +97,4 @@ def project_search(request):
         for p in projects
     ]
 
-    return Response(data)
+    return Response(data) 
