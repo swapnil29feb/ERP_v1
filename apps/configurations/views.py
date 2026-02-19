@@ -31,14 +31,11 @@ class LightingConfigurationListAPI(ModelViewSet):
 
         if project_id:
             qs = qs.filter(project_id=project_id)
-<<<<<<< HEAD
-=======
         print(show_all)
         # default → onlynon active
         # if show_all != "None":
         #     qs = qs.filter(is_active=True)
 
->>>>>>> f48f0ec0fdec401e8b21bcbabab5494234426d2c
         return qs.select_related(
             "product",
             "area",
@@ -46,12 +43,8 @@ class LightingConfigurationListAPI(ModelViewSet):
         ).prefetch_related(
             "configuration_drivers__driver",
             "accessories__accessory"
-<<<<<<< HEAD
-        )
-=======
         ).order_by("configuration_version")
 
->>>>>>> f48f0ec0fdec401e8b21bcbabab5494234426d2c
     serializer_class = LightingConfigurationSerializer
     permission_classes = [IsEditorOrReadOnly]
     filter_backends = [SearchFilter, DjangoFilterBackend]
