@@ -305,12 +305,7 @@ def generate_boq(project, user):
     # -----------------------------
     # 7. RETURN RESULT
     # -----------------------------
-    return {
-        "boq_id": boq.id,
-        "version": boq.version,
-        "status": boq.status,
-        "source_configuration_version": config_version,
-    }
+    return boq
 
 
 def get_boq_summary(boq):

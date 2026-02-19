@@ -55,7 +55,7 @@ class GenerateBOQAPI(APIView):
 
             return Response({
                 "success": True,
-                "details": boq
+                "details": BOQSerializer(boq).data
             })
 
         except Project.DoesNotExist:
@@ -71,6 +71,7 @@ class GenerateBOQAPI(APIView):
             )
 
         except Exception as e:
+            print("erroe",e)
             import traceback
             traceback.print_exc()
             return Response(
