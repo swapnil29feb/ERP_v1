@@ -1,5 +1,6 @@
 import io
 import openpyxl
+
 from decimal import Decimal
 from datetime import date
 from django.utils import timezone
@@ -8,14 +9,26 @@ from django.db.models import Sum
 from django.http import HttpResponse
 from django.core.exceptions import ValidationError
 from django.db.models import Max
+from reportlab.platypus import Image
+from reportlab.lib.utils import ImageReader
+import os
 
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
+from reportlab.platypus import (
+    SimpleDocTemplate,
+    Paragraph,
+    Spacer,
+    Table,
+    TableStyle,
+    Image,
+)
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer, Image
+from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.units import mm
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_RIGHT
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 
 from apps.boq.models import BOQ, BOQItem
 from apps.projects.models import Project
@@ -30,116 +43,312 @@ class BOQPDFBuilder:
         self.boq = boq
         self.is_draft = is_draft
         self.buffer = io.BytesIO()
-        self.pagesize = A4
+
+        # Landscape A4
+        self.pagesize = landscape(A4)
         self.width, self.height = self.pagesize
-        self.MARGIN_X = 15 * mm
-        self.MARGIN_Y = 20 * mm
+
+        self.MARGIN_X = 12 * mm
+        self.MARGIN_Y = 12 * mm
+
+        # Register Unicode font (for ₹ symbol)
+        font_path = os.path.join("fonts", "DejaVuSans.ttf")
+        pdfmetrics.registerFont(TTFont("DejaVu", font_path))
+
         self.styles = getSampleStyleSheet()
+
         self.style_normal = ParagraphStyle(
-            'CreateNormal', parent=self.styles['Normal'], fontSize=8, leading=10
+            'NormalSmall',
+            parent=self.styles['Normal'],
+            fontName='DejaVu',
+            fontSize=9,
+            leading=12
         )
 
+        self.style_bold = ParagraphStyle(
+            'BoldSmall',
+            parent=self.styles['Normal'],
+            fontName='DejaVu',
+            fontSize=9,
+            leading=12,
+        )
+
+    # --------------------------------------------------
+    # Header + Footer
+    # --------------------------------------------------
     def _header_footer(self, canvas, doc):
         canvas.saveState()
-        canvas.setFont('Helvetica-Bold', 14)
+
+        canvas.setFont('DejaVu', 14)
         canvas.drawString(self.MARGIN_X, self.height - 30, "TVUM TECH")
-        canvas.setFont('Helvetica', 10)
+
+        canvas.setFont('DejaVu', 10)
         canvas.drawString(self.MARGIN_X, self.height - 45, "Lighting ERP – Bill of Quantities")
-        canvas.setFont('Helvetica', 9)
+
+        canvas.setFont('DejaVu', 9)
         canvas.drawString(self.MARGIN_X, self.height - 65, f"Project: {self.boq.project.name}")
-        canvas.drawRightString(self.width - self.MARGIN_X, self.height - 65, f"BOQ Version: {self.boq.version}")
+        canvas.drawRightString(
+            self.width - self.MARGIN_X,
+            self.height - 65,
+            f"BOQ Version: {self.boq.version}"
+        )
+
         canvas.drawString(self.MARGIN_X, self.height - 80, f"Status: {self.boq.status}")
-        canvas.drawRightString(self.width - self.MARGIN_X, self.height - 80, f"Date: {date.today().strftime('%d-%m-%Y')}")
+        canvas.drawRightString(
+            self.width - self.MARGIN_X,
+            self.height - 80,
+            f"Date: {date.today().strftime('%d-%m-%Y')}"
+        )
+
         canvas.setStrokeColor(colors.black)
-        canvas.setLineWidth(0.5)
-        canvas.line(self.MARGIN_X, self.height - 90, self.width - self.MARGIN_X, self.height - 90)
-        canvas.setFont('Helvetica', 8)
-        canvas.drawCentredString(self.width / 2, 20, "System Generated BOQ | TVUM Lighting ERP")
-        canvas.drawRightString(self.width - self.MARGIN_X, 20, f"Page {doc.page}")
+        canvas.line(
+            self.MARGIN_X,
+            self.height - 90,
+            self.width - self.MARGIN_X,
+            self.height - 90
+        )
+
+        canvas.setFont('DejaVu', 8)
+        canvas.drawCentredString(
+            self.width / 2,
+            15,
+            "System Generated BOQ | TVUM Lighting ERP"
+        )
+        canvas.drawRightString(
+            self.width - self.MARGIN_X,
+            15,
+            f"Page {doc.page}"
+        )
+
         if self.is_draft:
             self._draw_watermark(canvas)
+
         canvas.restoreState()
 
+    # --------------------------------------------------
+    # Watermark
+    # --------------------------------------------------
     def _draw_watermark(self, canvas):
         canvas.saveState()
-        canvas.setFont('Helvetica-Bold', 36)
-        canvas.setStrokeColor(colors.lightgrey)
+        canvas.setFont('DejaVu', 50)
         canvas.setFillColor(colors.lightgrey, alpha=0.15)
-        text = "DRAFT – INTERNAL ESTIMATE – NOT FOR CLIENT USE"
-        canvas.translate(self.width/2, self.height/2)
+        canvas.translate(self.width / 2, self.height / 2)
         canvas.rotate(45)
-        canvas.drawCentredString(0, 0, text)
+        canvas.drawCentredString(0, 0, "DRAFT - FOR INTERNAL USE ONLY")
         canvas.restoreState()
 
+    # --------------------------------------------------
+    # Currency
+    # --------------------------------------------------
     def _format_currency(self, value):
-        return f"₹ {value:,.2f}"
+        return f"₹ {Decimal(value):,.2f}"
 
+    # --------------------------------------------------
+    # Main Builder
+    # --------------------------------------------------
     def build(self):
         doc = SimpleDocTemplate(
-            self.buffer, pagesize=self.pagesize,
-            leftMargin=self.MARGIN_X, rightMargin=self.MARGIN_X,
-            topMargin=40 * mm, bottomMargin=30 * mm
+            self.buffer,
+            pagesize=self.pagesize,
+            leftMargin=20 * mm,
+            rightMargin=20 * mm,
+            topMargin=35 * mm,
+            bottomMargin=25 * mm
         )
+
         elements = []
         grand_total = Decimal(0)
-        # areas = self.boq.items.select_related("area").order_by("area__name").values_list("area__id", "area__name").distinct()
+
         areas = (
             self.boq.items
             .select_related("area")
             .values_list("area__id", "area__name")
             .distinct()
         )
+
         for area_id, area_name in areas:
             elements.append(Paragraph(f"<b>Area: {area_name}</b>", self.styles['Heading4']))
             elements.append(Spacer(1, 5))
-            data = [["Type", "Item Code", "Description", "Qty", "Unit Rate", "Total"]]
-            col_widths = [25*mm, 40*mm, 60*mm, 15*mm, 25*mm, 25*mm]
+
+            table_data = [[
+                "Image",
+                "Type",
+                "Code",
+                "Description",
+                "Qty",
+                "Unit",
+                "Rate",
+                "GST",
+                "Total"
+            ]]
+
             area_total = Decimal(0)
             items = self.boq.items.filter(area_id=area_id)
+
             for item in items:
-                qty = Decimal(item.quantity)
-                selling_rate = Decimal(item.unit_price or 0) * (1 + Decimal(item.markup_pct or 0) / 100)
+
+                qty = Decimal(item.quantity or 0)
                 line_total = Decimal(item.final_price or 0)
+
+                # derive base for display
+                if qty > 0:
+                    total_unit = line_total / qty
+                else:
+                    total_unit = Decimal("0")
+
+                base_price = total_unit / Decimal("1.18")
+                gst = total_unit - base_price
+
                 area_total += line_total
                 grand_total += line_total
-                raw_desc = "-"
-                item_code = "-"
-                if item.item_type == "PRODUCT" and item.product:
-                    raw_desc = item.product.make
-                    item_code = item.product.order_code
-                elif item.item_type == "DRIVER" and item.driver:
-                    raw_desc = f"{item.driver.driver_make} - {item.driver.driver_code}"
-                elif item.item_type == "ACCESSORY" and item.accessory:
-                    raw_desc = item.accessory.accessory_name
 
-                data.append([
-                    item.item_type,
-                    Paragraph(item_code, self.style_normal),
-                    Paragraph(raw_desc, self.style_normal),
-                    str(qty),
-                    self._format_currency(selling_rate),
-                    self._format_currency(line_total)
-                ])
-            data.append(["", "", "Area Subtotal:", "", "", self._format_currency(area_total)])
-            table = Table(data, colWidths=col_widths, repeatRows=1)
+                img = ""
+                item_code = "-"
+                desc = "-"
+
+                # PRODUCT
+                if item.item_type == "PRODUCT" and item.product:
+                    product = item.product
+                    item_code = product.order_code or "-"
+                    desc = (
+                        f"{product.make} | "
+                        f"{product.wattage}W | "
+                        f"{product.cct_kelvin}K | "
+                        f"{product.beam_angle_degree}°"
+                    )
+
+                    if product.visual_image:
+                        try:
+                            img = Image(
+                                product.visual_image.path,
+                                width=28,
+                                height=28
+                            )
+                        except:
+                            img = ""
+
+                    table_data.append([
+                        img,
+                        "Product",
+                        item_code,
+                        Paragraph(desc, self.style_normal),
+                        str(qty),
+                        "Nos",
+                        self._format_currency(base_price),
+                        self._format_currency(gst),
+                        self._format_currency(line_total)
+                    ])
+
+                # DRIVER
+                elif item.item_type == "DRIVER" and item.driver:
+                    driver = item.driver
+                    desc = f"{driver.driver_make} {driver.driver_code}"
+
+                    table_data.append([
+                        "",
+                        Paragraph("→ Driver", self.style_normal),
+                        "-",
+                        Paragraph(desc, self.style_normal),
+                        str(qty),
+                        "Nos",
+                        self._format_currency(base_price),
+                        self._format_currency(gst),
+                        self._format_currency(line_total)
+                    ])
+
+                # ACCESSORY
+                elif item.item_type == "ACCESSORY" and item.accessory:
+                    acc = item.accessory
+                    desc = acc.accessory_name
+
+                    table_data.append([
+                        "",
+                        Paragraph("→ Accessory", self.style_normal),
+                        "-",
+                        Paragraph(desc, self.style_normal),
+                        str(qty),
+                        "Nos",
+                        self._format_currency(base_price),
+                        self._format_currency(gst),
+                        self._format_currency(line_total)
+                    ])
+
+            # Area subtotal
+            table_data.append([
+                "", "", "", "Area Subtotal",
+                "", "", "",
+                "",
+                self._format_currency(area_total)
+            ])
+
+            usable_width = doc.width
+            table = Table(
+                table_data,
+                colWidths=[
+                    usable_width * 0.05,  # image
+                    usable_width * 0.08,  # type
+                    usable_width * 0.12,  # code
+                    usable_width * 0.30,  # description
+                    usable_width * 0.07,  # qty
+                    usable_width * 0.07,  # unit
+                    usable_width * 0.10,  # rate
+                    usable_width * 0.10,  # gst
+                    usable_width * 0.11,  # total
+                ],
+                repeatRows=1,
+                hAlign="CENTER"
+            )
+
             table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.Color(0.9, 0.9, 0.9)),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
-                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 9),
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                ('ALIGN', (3, 1), (-1, -1), 'RIGHT'),
-                ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#E8E8E8")),
+                ('FONTNAME', (0, 0), (-1, 0), 'DejaVu'),
+                ('FONTSIZE', (0, 0), (-1, 0), 10),
+
+                ('FONTNAME', (0, 1), (-1, -1), 'DejaVu'),
+                ('FONTSIZE', (0, 1), (-1, -1), 9),
+
+                ('ALIGN', (4, 1), (-1, -1), 'RIGHT'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+
+                # internal padding
+                ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+                ('TOPPADDING', (0, 0), (-1, -1), 5),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+
+                ('ROWBACKGROUNDS', (0, 1), (-1, -2),
+                [colors.white, colors.HexColor("#F7F7F7")]),
+
+                ('GRID', (0, 0), (-1, -1), 0.4, colors.grey),
+
+                ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#EFEFEF")),
+                ('FONTNAME', (0, -1), (-1, -1), 'DejaVu'),
             ]))
+
             elements.append(table)
-            elements.append(Spacer(1, 20))
-        elements.append(Paragraph(f"Grand Total: {self._format_currency(grand_total)}", ParagraphStyle('Total', parent=self.styles['Normal'], alignment=TA_RIGHT, fontSize=12, fontName='Helvetica-Bold')))
-        doc.build(elements, onFirstPage=self._header_footer, onLaterPages=self._header_footer)
+            elements.append(Spacer(1, 15))
+
+        # Grand total
+        elements.append(Paragraph(
+            f"Grand Total: {self._format_currency(grand_total)}",
+            ParagraphStyle(
+                'Total',
+                parent=self.styles['Normal'],
+                alignment=TA_RIGHT,
+                fontName='DejaVu',
+                fontSize=13,
+            )
+        ))
+
+        doc.build(
+            elements,
+            onFirstPage=self._header_footer,
+            onLaterPages=self._header_footer
+        )
+
         self.buffer.seek(0)
         response = HttpResponse(self.buffer, content_type="application/pdf")
-        filename = f"BOQ_{self.boq.project.name}_V{self.boq.version}_{self.boq.status}.pdf"
+        filename = f"{self.boq.project.name}_V{self.boq.version}_{self.boq.status}.pdf"
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
         return response
 

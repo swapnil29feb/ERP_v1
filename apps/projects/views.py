@@ -15,7 +15,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 
 
 class ProjectViewSet(ModelViewSet):
-    queryset = Project.objects.all()
+    queryset = Project.objects.all().order_by('-id')
     serializer_class = ProjectSerializer
     permission_classes = [IsAuthenticated]
 
@@ -42,7 +42,7 @@ class ProjectViewSet(ModelViewSet):
 
 
 class AreaViewSet(ModelViewSet):
-    queryset = Area.objects.all()
+    queryset = Area.objects.all().order_by('-id')
     serializer_class = AreaSerializer
     permission_classes = [IsEditorOrReadOnly]
 
@@ -68,7 +68,7 @@ class AreaViewSet(ModelViewSet):
 
 
 class SubAreaViewSet(ModelViewSet):
-    queryset = SubArea.objects.all()
+    queryset = SubArea.objects.all().order_by('-id')
     serializer_class = SubAreaSerializer
     permission_classes = [IsEditorOrReadOnly]
 

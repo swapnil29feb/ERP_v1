@@ -44,9 +44,10 @@ class Product(models.Model):
     warranty_years = models.IntegerField(null=True, blank=True)
 
     website_link = models.URLField(null=True, blank=True)
-    visual_image = models.ImageField(upload_to='lighting_specs/images/', null=True, blank=True)
-    illustrative_details = models.ImageField(upload_to='lighting_specs/images/', null=True, blank=True)
-    photometrics = models.ImageField(upload_to='lighting_specs/images/', null=True, blank=True)
+    visual_image = models.ImageField(upload_to='lighting_specs/visual/', null=True, blank=True)
+    illustrative_details = models.ImageField(upload_to='lighting_specs/illustrative/', null=True, blank=True)
+    photometrics = models.ImageField(upload_to='lighting_specs/photometrics/', null=True, blank=True)
+
 
     base_price = models.DecimalField(
         max_digits= 10,

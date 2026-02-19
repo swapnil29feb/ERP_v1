@@ -253,10 +253,11 @@ class BOQExportExcelAPI(APIView):
 class ApplyMarginAPI(APIView):
     permission_classes = [IsAdmin]
     filter_backends = [SearchFilter, DjangoFilterBackend]
+
     def post(self, request, boq_id):
         boq = get_object_or_404(BOQ, id=boq_id)
 
-        # ✅ ERP HARD RULE: No edits after approval
+        # ERP HARD RULE: No edits after approval
         if boq.status != "DRAFT":
             return Response(
                 {"detail": "Cannot modify approved BOQ"},
@@ -271,30 +272,53 @@ class ApplyMarginAPI(APIView):
             )
 
         from decimal import Decimal
-        markup_pct = Decimal(str(request.data.get("markup_pct")))
-        
+        markup_pct = Decimal(str(markup_pct))
+
+        subtotal = Decimal("0")
+
+        # Apply margin to items
         for item in boq.items.all():
+            base_amount = item.unit_price * item.quantity
+            final_amount = base_amount * (1 + markup_pct / 100)
+
             item.markup_pct = markup_pct
-            # Uses current unit_price which might have been overridden
-            item.final_price = (
-                item.unit_price * item.quantity * (1 + markup_pct / 100)
-            )
+            item.final_price = final_amount
             item.save()
+
+            subtotal += base_amount
+
+        # Update BOQ header totals
+        margin_amount = subtotal * markup_pct / Decimal("100")
+        grand_total = subtotal + margin_amount
+
+        boq.subtotal = subtotal
+        boq.margin_percent = markup_pct
+        boq.margin_amount = margin_amount
+        boq.grand_total = grand_total
+        boq.save()
 
         from apps.boq.models import AuditLogEntry
         AuditLogEntry.objects.create(
             user=request.user,
             action="MARGIN_APPLIED",
-            details={"boq_id": boq.id, "version": boq.version, "markup_pct": float(markup_pct)}
+            details={
+                "boq_id": boq.id,
+                "version": boq.version,
+                "markup_pct": float(markup_pct)
+            }
         )
 
         return Response(
             {
                 "detail": f"Margin {markup_pct}% applied successfully",
-                "boq_id": boq.id
+                "boq_id": boq.id,
+                "subtotal": subtotal,
+                "margin_amount": margin_amount,
+                "grand_total": grand_total
             },
             status=status.HTTP_200_OK
         )
+
     
 class BOQItemPriceUpdateAPI(APIView):
     """
