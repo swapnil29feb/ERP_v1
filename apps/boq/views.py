@@ -20,6 +20,8 @@ from apps.boq.services.boq_service import BOQExcelBuilder
 from apps.boq.serializers import BOQSerializer, BOQItemSerializer, BOQItemWriteSerializer
 from apps.common.authentication import QueryParamJWTAuthentication
 from rest_framework.generics import GenericAPIView
+from drf_spectacular.utils import extend_schema
+from apps.boq.serializers import BOQItemPriceUpdateSerializer
 from rest_framework.serializers import Serializer
 # from django.http import HttpResponse
 # from reportlab.pdfgen import canvas
@@ -321,66 +323,76 @@ class ApplyMarginAPI(APIView):
 
     
 class BOQItemPriceUpdateAPI(APIView):
-    """
-    API endpoint to update BOQItem unit_price (price override).
-    
-    Rules:
-    - Only DRAFT BOQs can be modified
-    - Recalculates final_price after override
-    - Generates audit log entry
-    - Master prices are never modified
-    """
     permission_classes = [IsEditor]
-    filter_backends = [SearchFilter, DjangoFilterBackend]
-
+    @extend_schema(
+        request=BOQItemPriceUpdateSerializer,
+        responses={
+            200: BOQItemPriceUpdateSerializer,
+            400: None
+        },
+        description="Override unit price of BOQ item (Only DRAFT BOQ allowed)"
+    )
     def patch(self, request, boq_item_id):
         try:
             boq_item = get_object_or_404(BOQItem, id=boq_item_id)
-            def patch(self, request, boq_item_id):
-                boq_item = get_object_or_404(BOQItem, id=boq_item_id)
-                boq = boq_item.boq
-                if boq.status != "DRAFT":
-                    return Response({"error": "Approved BOQ cannot be modified"}, status=400)
-                from apps.boq.serializers import BOQItemPriceUpdateSerializer
-                serializer = BOQItemPriceUpdateSerializer(data=request.data)
-                if not serializer.is_valid():
-                    return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-                new_unit_price = serializer.validated_data['unit_price']
-                old_unit_price = boq_item.unit_price
-                boq_item.unit_price = new_unit_price
-                boq_item.final_price = (boq_item.unit_price * boq_item.quantity * (1 + boq_item.markup_pct / 100))
-                boq_item.save()
-                item_ref = self._get_item_reference(boq_item)
-                from apps.boq.models import AuditLogEntry
-                AuditLogEntry.objects.create(
-                    user=request.user,
-                    action="PRICE UPDATE",
-                    details={
-                        "boq_id": boq.id,
-                        "version": boq.version,
-                        "boq_item_id": boq_item.id,
-                        "item_reference": item_ref,
-                        "old_unit_price": float(old_unit_price),
-                        "new_unit_price": float(new_unit_price),
-                        "area_name": boq_item.area.name if boq_item.area else "Unknown",
-                        "quantity": boq_item.quantity,
-                        "old_final_price": float(old_unit_price * boq_item.quantity * (1 + boq_item.markup_pct / 100)),
-                        "new_final_price": float(boq_item.final_price)
-                    }
+            boq = boq_item.boq
+
+            if boq.status != "DRAFT":
+                return Response(
+                    {"error": "Approved BOQ cannot be modified"},
+                    status=status.HTTP_400_BAD_REQUEST
                 )
-                return Response({
-                    "detail": "BOQ item price updated successfully",
+
+            from apps.boq.serializers import BOQItemPriceUpdateSerializer
+            serializer = BOQItemPriceUpdateSerializer(data=request.data)
+
+            if not serializer.is_valid():
+                return Response(
+                    {"errors": serializer.errors},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            new_unit_price = serializer.validated_data['unit_price']
+            old_unit_price = boq_item.unit_price
+
+            boq_item.unit_price = new_unit_price
+            boq_item.final_price = (
+                boq_item.unit_price * boq_item.quantity *
+                (1 + boq_item.markup_pct / 100)
+            )
+            boq_item.save()
+
+            item_ref = self._get_item_reference(boq_item)
+
+            from apps.boq.models import AuditLogEntry
+            AuditLogEntry.objects.create(
+                user=request.user,
+                action="PRICE UPDATE",
+                details={
+                    "boq_id": boq.id,
+                    "version": boq.version,
                     "boq_item_id": boq_item.id,
-                    "unit_price": float(boq_item.unit_price),
-                    "final_price": float(boq_item.final_price),
-                    "item_reference": item_ref
-                }, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response(
-                {"error": str(e)},
-                status=400
+                    "item_reference": item_ref,
+                    "old_unit_price": float(old_unit_price),
+                    "new_unit_price": float(new_unit_price),
+                    "area_name": boq_item.area.name if boq_item.area else "Unknown",
+                    "quantity": boq_item.quantity,
+                    "old_final_price": float(old_unit_price * boq_item.quantity * (1 + boq_item.markup_pct / 100)),
+                    "new_final_price": float(boq_item.final_price)
+                }
             )
 
+            return Response({
+                "detail": "BOQ item price updated successfully",
+                "boq_item_id": boq_item.id,
+                "unit_price": float(boq_item.unit_price),
+                "final_price": float(boq_item.final_price),
+                "item_reference": item_ref
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
     def _get_item_reference(self, boq_item):
         """Generate human-readable reference for audit log"""
         if boq_item.item_type == "PRODUCT" and boq_item.product:
