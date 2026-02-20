@@ -11,6 +11,7 @@ from apps.boq.services.boq_service import (
     approve_boq,
     apply_margin_to_boq
 )
+from .services.compare_service import compare_boq_versions
 from rest_framework import serializers
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
@@ -455,3 +456,21 @@ class BOQItemViewSet(ModelViewSet):
             queryset = queryset.filter(boq_id=boq_id)
         return queryset
 
+class CompareBOQVersionsAPI(APIView):
+
+    def get(self, request, project_id):
+        v1 = request.query_params.get("v1")
+        v2 = request.query_params.get("v2")
+
+        if not v1 or not v2:
+            return Response({"error": "v1 and v2 are required"}, status=400)
+
+        result = compare_boq_versions(
+            project_id=project_id,
+            v1=int(v1),
+            v2=int(v2)
+        )
+
+        return Response(result)
+    
+    

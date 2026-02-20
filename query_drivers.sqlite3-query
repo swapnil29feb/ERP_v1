@@ -1,0 +1,55 @@
+-- database: db.sqlite3
+
+
+INSERT INTO masters_driver (
+    driver_code,
+    driver_make,
+    input_voltage_min,
+    input_voltage_max,
+    max_wattage,
+    dimmable,
+    output_current_ma,
+    output_voltage_min,
+    output_voltage_max,
+    constant_type,
+    dimming_protocol,
+    ip_class,
+    warranty_years,
+    base_price
+) VALUES
+
+-- Philips Drivers
+('DRV-PH-36W-DALI', 'Philips', 100, 240, 36, 'YES', 700, 30, 54, 'CC', 'DALI', 20, 5, 1450.00),
+('DRV-PH-60W-010V', 'Philips', 100, 240, 60, 'YES', 1050, 36, 58, 'CC', '0-10V', 20, 5, 1950.00),
+
+-- Osram Drivers
+('DRV-OS-30W-ND', 'Osram', 110, 240, 30, 'NO', 600, 28, 48, 'CC', 'NONE', 20, 3, 1100.00),
+('DRV-OS-75W-DALI', 'Osram', 100, 277, 75, 'YES', 1400, 36, 60, 'CC', 'DALI', 20, 5, 2600.00),
+
+-- Tridonic Drivers
+('DRV-TR-40W-TRIAC', 'Tridonic', 100, 240, 40, 'YES', 750, 32, 54, 'CC', 'TRIAC', 20, 4, 1550.00),
+('DRV-TR-100W-CV', 'Tridonic', 100, 240, 100, 'NO', NULL, 12, 24, 'CV', 'NONE', 20, 3, 3200.00),
+
+-- Meanwell Drivers
+('DRV-MW-150W-CV', 'Meanwell', 180, 264, 150, 'NO', NULL, 24, 24, 'CV', 'NONE', 65, 5, 4200.00),
+('DRV-MW-200W-010V', 'Meanwell', 180, 264, 200, 'YES', 5000, 36, 48, 'CC', '0-10V', 65, 5, 5800.00),
+
+-- Inventronics Drivers
+('DRV-IN-50W-DALI', 'Inventronics', 100, 277, 50, 'YES', 900, 30, 56, 'CC', 'DALI', 20, 5, 2100.00),
+('DRV-IN-120W-010V', 'Inventronics', 100, 277, 120, 'YES', 2000, 36, 60, 'CC', '0-10V', 20, 5, 3900.00),
+
+-- Generic Drivers
+('DRV-GN-24W-ND', 'Generic', 100, 240, 24, 'NO', 500, 24, 48, 'CC', 'NONE', 20, 2, 650.00),
+('DRV-GN-18W-TRIAC', 'Generic', 100, 240, 18, 'YES', 350, 20, 42, 'CC', 'TRIAC', 20, 2, 520.00),
+
+-- Premium Industrial
+('DRV-IND-250W-IP65', 'IndustrialTech', 180, 264, 250, 'NO', NULL, 48, 48, 'CV', 'NONE', 65, 7, 7800.00),
+('DRV-IND-180W-DALI', 'IndustrialTech', 180, 264, 180, 'YES', 3000, 36, 60, 'CC', 'DALI', 65, 7, 6500.00),
+
+-- Emergency Driver
+('DRV-EM-20W-BAT', 'EmergencyPro', 100, 240, 20, 'NO', 350, 20, 40, 'CC', 'NONE', 20, 3, 1200.00);
+-- database: :memory:
+
+-- Use the ▷ button in the top right corner to run the entire file.
+
+

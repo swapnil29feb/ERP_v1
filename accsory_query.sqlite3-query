@@ -1,0 +1,52 @@
+-- database: db.sqlite3
+
+INSERT INTO masters_accessory (
+    accessory_name,
+    accessory_type,
+    description,
+    compatible_mounting_styles,
+    min_diameter_mm,
+    max_diameter_mm,
+    compatible_ip_class,
+    accessory_category,
+    base_price
+) VALUES
+
+-- MOUNTING ACCESSORIES
+('Ceiling Surface Ring 100mm', 'Surface Ring', 'Aluminium surface mounting ring', '["SURFACE"]', 90, 110, 20, 'MOUNTING', 350.00),
+('Recessed Trim Round 150mm', 'Trim', 'White powder-coated recessed trim', '["RECESSED"]', 140, 160, 20, 'MOUNTING', 420.00),
+('Ingress Ground Sleeve', 'Sleeve', 'Heavy-duty inground mounting sleeve', '["INGROUND"]', 80, 120, 67, 'MOUNTING', 950.00),
+('Track Adapter Universal', 'Adapter', 'Universal 3-phase track adapter', '["TRACK MOUNTED"]', NULL, NULL, 20, 'MOUNTING', 780.00),
+('Surface Mount Box 4x4', 'Mount Box', 'GI surface mount back box', '["SURFACE"]', NULL, NULL, 20, 'MOUNTING', 280.00),
+('Adjustable Recessed Frame', 'Frame', 'Tilt adjustable recessed frame', '["RECESSED"]', 100, 130, 20, 'MOUNTING', 510.00),
+('Inground Housing IP67', 'Housing', 'Stainless steel IP67 housing', '["INGROUND"]', 100, 150, 67, 'MOUNTING', 1450.00),
+('Track Mount Extension Rod', 'Extension Rod', 'Adjustable suspension rod for track', '["TRACK MOUNTED"]', NULL, NULL, 20, 'MOUNTING', 620.00),
+
+-- OPTICAL ACCESSORIES
+('Honeycomb Louver 90mm', 'Louver', 'Glare reduction honeycomb', '["SURFACE","RECESSED"]', 80, 100, 20, 'OPTICAL', 290.00),
+('Frosted Diffuser 120mm', 'Diffuser', 'Matte diffuser lens', '["SURFACE","RECESSED"]', 110, 130, 20, 'OPTICAL', 240.00),
+('Clear Glass Cover', 'Glass Cover', 'Tempered clear glass cover', '["INGROUND"]', 90, 110, 67, 'OPTICAL', 460.00),
+('Anti-Glare Shield', 'Shield', 'Black anti-glare shield', '["SURFACE","RECESSED"]', NULL, NULL, 20, 'OPTICAL', 310.00),
+('Linear Diffuser Strip', 'Diffuser', 'Opal diffuser for linear lights', '["SURFACE","TRACK MOUNTED"]', NULL, NULL, 20, 'OPTICAL', 390.00),
+('Wall Washer Lens', 'Lens', 'Asymmetric wall washer lens', '["RECESSED"]', 80, 120, 20, 'OPTICAL', 520.00),
+('Beam Narrow Lens 15°', 'Lens', '15 degree narrow beam lens', '["SURFACE","RECESSED"]', 60, 90, 20, 'OPTICAL', 430.00),
+('IP67 Protective Glass', 'Glass Cover', 'Sealed glass for outdoor use', '["INGROUND"]', 100, 150, 67, 'OPTICAL', 870.00),
+
+-- DECORATIVE ACCESSORIES
+('Gold Decorative Ring', 'Decor Ring', 'Premium gold finish ring', '["RECESSED"]', 90, 120, 20, 'DECORATIVE', 1250.00),
+('Black Matte Trim', 'Trim', 'Matte black trim ring', '["SURFACE","RECESSED"]', 80, 100, 20, 'DECORATIVE', 480.00),
+('Wood Finish Bezel', 'Bezel', 'Wood texture decorative bezel', '["SURFACE"]', 90, 110, 20, 'DECORATIVE', 980.00),
+('Crystal Glass Cover', 'Glass Cover', 'Decorative crystal finish', '["RECESSED"]', 70, 100, 20, 'DECORATIVE', 1650.00),
+('Brushed Nickel Ring', 'Ring', 'Nickel finish decorative ring', '["SURFACE"]', 80, 100, 20, 'DECORATIVE', 720.00),
+('Copper Accent Frame', 'Frame', 'Copper highlight decorative frame', '["RECESSED"]', 100, 130, 20, 'DECORATIVE', 1380.00),
+
+-- INSTALLATION ACCESSORIES
+('Suspension Cable Kit 1m', 'Cable Kit', 'Steel suspension kit 1 meter', '["SURFACE","TRACK MOUNTED"]', NULL, NULL, 20, 'INSTALLATION', 560.00),
+('Suspension Cable Kit 2m', 'Cable Kit', 'Steel suspension kit 2 meter', '["SURFACE","TRACK MOUNTED"]', NULL, NULL, 20, 'INSTALLATION', 720.00),
+('Quick Connector 3 Pin', 'Connector', '3-pin fast connector', '["SURFACE","RECESSED"]', NULL, NULL, 20, 'INSTALLATION', 120.00),
+('Junction Box IP65', 'Junction Box', 'Weatherproof junction box', '["INGROUND"]', NULL, NULL, 65, 'INSTALLATION', 650.00),
+('Mounting Clip Set', 'Clip Set', 'Set of 4 mounting clips', '["SURFACE","RECESSED"]', NULL, NULL, 20, 'INSTALLATION', 210.00),
+('Wire Guard Mesh', 'Guard', 'Protective mesh guard', '["INGROUND"]', 80, 150, 67, 'INSTALLATION', 890.00),
+('Adjustable Bracket Set', 'Bracket', 'Adjustable metal bracket set', '["SURFACE"]', NULL, NULL, 20, 'INSTALLATION', 430.00),
+('IP67 Gasket Kit', 'Gasket', 'Rubber sealing gasket kit', '["INGROUND"]', 90, 140, 67, 'INSTALLATION', 370.00);
+

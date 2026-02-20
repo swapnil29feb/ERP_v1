@@ -10,7 +10,8 @@ from .views import (
     BOQExportExcelAPI,
     ApplyMarginAPI,
     BOQItemPriceUpdateAPI,
-    BOQItemViewSet
+    BOQItemViewSet,
+    CompareBOQVersionsAPI
 )
 
 router = DefaultRouter()
@@ -31,4 +32,5 @@ urlpatterns = [
     
     # Price Override (Transactional)
     path("items/<int:boq_item_id>/price/", BOQItemPriceUpdateAPI.as_view()),
+    path("compare/<int:project_id>/", CompareBOQVersionsAPI.as_view()),
 ]

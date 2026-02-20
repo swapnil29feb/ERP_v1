@@ -1,0 +1,127 @@
+-- database: db.sqlite3
+
+
+INSERT INTO projects_project (
+    inquiry_type,
+    allow_project_only_boq,
+    name,
+    project_code,
+    client_name,
+    location_metadata,
+    status,
+    expected_completion_date,
+    refered_by,
+    segment_area,
+    expecetd_mhr,
+    fee,
+    description,
+    created_at,
+    area_details,
+    notes,
+    tags
+) VALUES
+
+-- 1️⃣ Commercial Office Project
+(
+'AREA_WISE',
+0,
+'CyberTech Corporate Office',
+'CYBERTECH-1-20260220',
+'CyberTech Pvt Ltd',
+'{"address":"Tower B, IT Park","city":"Pune","state":"Maharashtra","country":"India"}',
+'ACTIVE',
+'2026-12-31',
+'Architect Referral',
+'COMMERCIAL',
+850,
+2500000,
+'Complete interior and facade lighting design for IT corporate office.',
+CURRENT_TIMESTAMP,
+'{"landscape_area":2000,"landscape_area_unit":"sq.ft","interior_area":45000,"interior_area_unit":"sq.ft","facade_area":8000,"facade_area_unit":"sq.ft"}',
+'High priority client. Requires energy-efficient lighting.',
+'office,corporate,highrise'
+),
+
+-- 2️⃣ Luxury Private Residence
+(
+'AREA_WISE',
+0,
+'Sharma Villa Residence',
+'SHARMAVILLA-2-20260220',
+'Mr. Rajesh Sharma',
+'{"address":"Palm Meadows","city":"Mumbai","state":"Maharashtra","country":"India"}',
+'ACTIVE',
+'2026-09-15',
+'Direct Client',
+'PRIVATE RESIDENCE',
+420,
+950000,
+'Luxury villa interior, landscape and facade lighting.',
+CURRENT_TIMESTAMP,
+'{"landscape_area":5000,"landscape_area_unit":"sq.ft","interior_area":12000,"interior_area_unit":"sq.ft","facade_area":3000,"facade_area_unit":"sq.ft"}',
+'Focus on warm lighting and decorative fixtures.',
+'villa,luxury,residential'
+),
+
+-- 3️⃣ Industrial Warehouse
+(
+'PROJECT_LEVEL',
+1,
+'IndoSteel Manufacturing Unit',
+'INDOSTEEL-3-20260220',
+'IndoSteel Industries',
+'{"address":"MIDC Industrial Area","city":"Nashik","state":"Maharashtra","country":"India"}',
+'ACTIVE',
+'2027-03-31',
+'Supplier Network',
+'INDUSTRIAL',
+1200,
+4800000,
+'High bay lighting for large industrial manufacturing facility.',
+CURRENT_TIMESTAMP,
+'{"landscape_area":0,"landscape_area_unit":"sq.ft","interior_area":85000,"interior_area_unit":"sq.ft","facade_area":5000,"facade_area_unit":"sq.ft"}',
+'Requires IP65 fixtures and heavy-duty drivers.',
+'industrial,warehouse,highbay'
+),
+
+-- 4️⃣ Hospitality Resort
+(
+'AREA_WISE',
+0,
+'Green Valley Resort',
+'GREENVALLEY-4-20260220',
+'Green Valley Hospitality',
+'{"address":"Hilltop Road","city":"Goa","state":"Goa","country":"India"}',
+'INQUIRY',
+'2027-01-20',
+'Interior Designer',
+'HOSPITALITY',
+980,
+3200000,
+'Landscape and decorative lighting for luxury resort property.',
+CURRENT_TIMESTAMP,
+'{"landscape_area":25000,"landscape_area_unit":"sq.ft","interior_area":30000,"interior_area_unit":"sq.ft","facade_area":10000,"facade_area_unit":"sq.ft"}',
+'Major focus on outdoor and pathway lighting.',
+'resort,landscape,hospitality'
+),
+
+-- 5️⃣ Retail Mall Project
+(
+'AREA_WISE',
+0,
+'City Square Mall',
+'CITYSQUARE-5-20260220',
+'Urban Retail Group',
+'{"address":"MG Road","city":"Bangalore","state":"Karnataka","country":"India"}',
+'ON_HOLD',
+'2026-11-30',
+'PMC Consultant',
+'MALL/MULTIPLEX',
+1500,
+6500000,
+'Complete lighting system for retail mall including parking and facade.',
+CURRENT_TIMESTAMP,
+'{"landscape_area":8000,"landscape_area_unit":"sq.ft","interior_area":120000,"interior_area_unit":"sq.ft","facade_area":20000,"facade_area_unit":"sq.ft"}',
+'Budget under review. Awaiting final approval.',
+'mall,retail,facade'
+);
