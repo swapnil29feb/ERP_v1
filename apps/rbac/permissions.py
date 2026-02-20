@@ -1,7 +1,6 @@
-def has_permission(user, module, action):
+def has_permission(user, perm):
     """
-    Check if the user has a specific permission in the format <module>_<action>.
-    Example: has_permission(user, 'projects', 'view')
+    Example:
+    has_permission(user, "boq.approve_boq")
     """
-    codename = f"{module}_{action}"
-    return user.has_perm(f"rbac.{codename}")
+    return user.has_perm(perm)

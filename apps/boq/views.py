@@ -3,6 +3,7 @@ from django.shortcuts import get_object_or_404
 from apps.projects.models import Project
 from apps.boq.models import BOQ, BOQItem
 from django.utils import timezone
+from apps.rbac.drf_permissions import HasPermission
 from apps.boq.services.boq_service import (
     get_project_boq_summary,
     get_boq_summary,
@@ -41,7 +42,8 @@ from django_filters.rest_framework import DjangoFilterBackend
 class GenerateBOQAPI(APIView):
     # serializer_class = Serializer
     serializer_class = BOQSerializer
-    permission_classes = [IsEditor]
+    permission_classes = [HasPermission]
+    permission_required = "boq.generate_boq"
     filter_backends = [SearchFilter, DjangoFilterBackend]
     def post(self, request, project_id):
         try:
@@ -189,7 +191,9 @@ class BOQVersionsListAPI(APIView):
   
 class BOQApproveAPI(APIView):
     serializer_class = serializers.Serializer
-    permission_classes = [IsAdmin]
+    # permission_classes = [IsAdmin]
+    permission_classes = [HasPermission]
+    permission_required = "boq.approve_boq"
     filter_backends = [SearchFilter, DjangoFilterBackend]
     def post(self, request, boq_id):
         from apps.rbac.permissions import has_permission
@@ -253,7 +257,8 @@ class BOQExportExcelAPI(APIView):
 
 
 class ApplyMarginAPI(APIView):
-    permission_classes = [IsAdmin]
+    permission_classes = [HasPermission]
+    permission_required = "boq.apply_margin"
     filter_backends = [SearchFilter, DjangoFilterBackend]
 
     def post(self, request, boq_id):

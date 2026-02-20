@@ -8,15 +8,6 @@ User = get_user_model()
 
 
 class BOQ(models.Model):
-    """
-    BOQ (Bill of Quantities) Model with Configuration Version Tracking.
-    
-    ERP Rules:
-    - Each BOQ is generated FROM a specific configuration version
-    - BOQ stores source_configuration_version for reproducibility
-    - BOQ versioning is separate from configuration versioning
-    - Draft BOQ is editable, Final BOQ is locked
-    """
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     version = models.PositiveIntegerField()
     status = models.CharField(
@@ -36,7 +27,6 @@ class BOQ(models.Model):
         blank=True
     )
     
-    # ERP: Track which configuration version this BOQ was generated from
     source_configuration_version = models.PositiveIntegerField(null=True, blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
@@ -47,6 +37,13 @@ class BOQ(models.Model):
         indexes = [
             models.Index(fields=['project', 'source_configuration_version']),
         ]
+        permissions = [
+            ("generate_boq", "Can generate BOQ"),
+            ("apply_margin", "Can apply margin"),
+            ("approve_boq", "Can approve BOQ"),
+            ("export_boq", "Can export BOQ"),
+        ]
+
 
 
 class BOQItem(models.Model):
